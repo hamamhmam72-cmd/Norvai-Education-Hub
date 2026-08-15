@@ -1,8 +1,32 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
+import healthRouter from "./health.js";
+import authRouter from "./auth.js";
+import profileRouter from "./profile.js";
+import dashboardRouter from "./dashboard.js";
+import lecturesRouter from "./lectures.js";
+import curriculaRouter from "./curricula.js";
+import chatRouter from "./chat.js";
+import summaryRouter from "./summary.js";
+import debugRouter from "./debug.js";
+import quizRouter from "./quiz.js";
+import careerRouter from "./career.js";
+import subscriptionsRouter from "./subscriptions.js";
+import adminRouter from "./admin.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
+router.use(profileRouter);
+router.use(dashboardRouter);
+router.use(lecturesRouter);
+router.use(curriculaRouter);
+router.use(chatRouter);
+router.use(summaryRouter);
+router.use(debugRouter);
+router.use(quizRouter);
+router.use(careerRouter);
+router.use(subscriptionsRouter);
+router.use(adminRouter);
 
 export default router;

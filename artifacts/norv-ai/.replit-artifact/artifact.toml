@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Norv_ai"
+description = "A full-stack AI-powered learning platform for IT and Software Engineering students. Features AI chatbot, smart summarizer, code debugger, quiz generator, career advisor, curated lecture library, and a CliQ-based subscription system. Includes a 6-step onboarding wizard, student dashboard, and admin panel."
+version = "1.0.0"
+id = "artifacts/norv-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22117
+
+[services.development]
+run = "pnpm --filter @workspace/norv-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/norv-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/norv-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22117"
+BASE_PATH = "/"

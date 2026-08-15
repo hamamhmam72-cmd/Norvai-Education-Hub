@@ -3,20 +3,31 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Norv_ai – Smart IT Learning Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: profile
+  - name: dashboard
+  - name: lectures
+  - name: curricula
+  - name: chat
+  - name: summary
+  - name: debug
+  - name: quiz
+  - name: career
+  - name: subscriptions
+  - name: admin
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +35,1599 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Profile / Onboarding ──────────────────────────────────────────────────
+  /profile/setup:
+    post:
+      operationId: completeSetup
+      tags: [profile]
+      summary: Complete 6-step onboarding wizard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /profile:
+    patch:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /profile/change-password:
+    post:
+      operationId: changePassword
+      tags: [profile]
+      summary: Change account password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Dashboard ─────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics for current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recent:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity for current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecentActivity"
+
+  /dashboard/recommended-lectures:
+    get:
+      operationId: getRecommendedLectures
+      tags: [dashboard]
+      summary: Get personalized lecture recommendations
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lecture"
+
+  # ── Lectures ──────────────────────────────────────────────────────────────
+  /lectures:
+    get:
+      operationId: getLectures
+      tags: [lectures]
+      summary: List lectures with optional filters
+      parameters:
+        - in: query
+          name: specialization
+          schema:
+            type: string
+        - in: query
+          name: difficulty
+          schema:
+            type: string
+        - in: query
+          name: curriculumId
+          schema:
+            type: number
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: saved
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lecture"
+
+    post:
+      operationId: createLecture
+      tags: [lectures]
+      summary: Create a new lecture (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LectureInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lecture"
+
+  /lectures/{id}:
+    get:
+      operationId: getLecture
+      tags: [lectures]
+      summary: Get a single lecture
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lecture"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateLecture
+      tags: [lectures]
+      summary: Update lecture (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LectureUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lecture"
+
+    delete:
+      operationId: deleteLecture
+      tags: [lectures]
+      summary: Delete lecture (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /lectures/{id}/save:
+    post:
+      operationId: saveLecture
+      tags: [lectures]
+      summary: Save lecture to favorites
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+    delete:
+      operationId: unsaveLecture
+      tags: [lectures]
+      summary: Remove lecture from favorites
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /lectures/{id}/complete:
+    post:
+      operationId: completeLecture
+      tags: [lectures]
+      summary: Mark lecture as completed
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Curricula ────────────────────────────────────────────────────────────
+  /curricula:
+    get:
+      operationId: getCurricula
+      tags: [curricula]
+      summary: List all curricula
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Curriculum"
+
+    post:
+      operationId: createCurriculum
+      tags: [curricula]
+      summary: Create curriculum (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurriculumInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Curriculum"
+
+  /curricula/{id}:
+    patch:
+      operationId: updateCurriculum
+      tags: [curricula]
+      summary: Update curriculum (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurriculumUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Curriculum"
+
+    delete:
+      operationId: deleteCurriculum
+      tags: [curricula]
+      summary: Delete curriculum (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ── AI Chatbot ────────────────────────────────────────────────────────────
+  /chat/sessions:
+    get:
+      operationId: getChatSessions
+      tags: [chat]
+      summary: List chat sessions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatSession"
+
+    post:
+      operationId: createChatSession
+      tags: [chat]
+      summary: Create new chat session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatSessionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSession"
+
+  /chat/sessions/{id}:
+    delete:
+      operationId: deleteChatSession
+      tags: [chat]
+      summary: Delete a chat session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /chat/sessions/{id}/messages:
+    get:
+      operationId: getChatMessages
+      tags: [chat]
+      summary: List messages in a session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message and get AI reply
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageInput"
+      responses:
+        "200":
+          description: AI reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+
+  # ── Smart Summary ─────────────────────────────────────────────────────────
+  /summaries:
+    get:
+      operationId: getSummaries
+      tags: [summary]
+      summary: List user's summaries
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Summary"
+
+    post:
+      operationId: createSummary
+      tags: [summary]
+      summary: Generate smart summary from text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummaryInput"
+      responses:
+        "201":
+          description: Generated summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Summary"
+
+  /summaries/{id}:
+    get:
+      operationId: getSummary
+      tags: [summary]
+      summary: Get a single summary
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Summary"
+
+    delete:
+      operationId: deleteSummary
+      tags: [summary]
+      summary: Delete a summary
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Code Debugger ─────────────────────────────────────────────────────────
+  /debug/analyze:
+    post:
+      operationId: analyzeCode
+      tags: [debug]
+      summary: Analyze code with AI, detect errors, score efficiency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DebugInput"
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugSession"
+
+  /debug/sessions:
+    get:
+      operationId: getDebugSessions
+      tags: [debug]
+      summary: List user's debug sessions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DebugSession"
+
+  /debug/sessions/{id}:
+    get:
+      operationId: getDebugSession
+      tags: [debug]
+      summary: Get a single debug session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugSession"
+
+  # ── Quiz Generator ────────────────────────────────────────────────────────
+  /quizzes/generate:
+    post:
+      operationId: generateQuiz
+      tags: [quiz]
+      summary: Generate quiz from material
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizGenerateInput"
+      responses:
+        "201":
+          description: Generated quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+
+  /quizzes:
+    get:
+      operationId: getQuizzes
+      tags: [quiz]
+      summary: List user's quizzes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quiz"
+
+  /quizzes/{id}:
+    get:
+      operationId: getQuiz
+      tags: [quiz]
+      summary: Get quiz with questions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+
+  /quizzes/{id}/submit:
+    post:
+      operationId: submitQuiz
+      tags: [quiz]
+      summary: Submit quiz answers and get results
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizSubmitInput"
+      responses:
+        "200":
+          description: Quiz result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+
+  /quizzes/{id}/attempts:
+    get:
+      operationId: getQuizAttempts
+      tags: [quiz]
+      summary: Get attempts for a quiz
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizAttempt"
+
+  # ── Career Advisor ────────────────────────────────────────────────────────
+  /career/recommendations:
+    get:
+      operationId: getCareerRecommendations
+      tags: [career]
+      summary: Get AI-powered career recommendations based on profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CareerRecommendation"
+
+  # ── Subscriptions ─────────────────────────────────────────────────────────
+  /subscriptions/status:
+    get:
+      operationId: getSubscriptionStatus
+      tags: [subscriptions]
+      summary: Get current user's subscription status
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionStatus"
+
+  /subscriptions/request:
+    post:
+      operationId: requestSubscription
+      tags: [subscriptions]
+      summary: Submit subscription request with CliQ receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionRequestInput"
+      responses:
+        "201":
+          description: Request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionRequest"
+
+  /subscriptions:
+    get:
+      operationId: getSubscriptionRequests
+      tags: [subscriptions]
+      summary: List all subscription requests (admin only)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionRequest"
+
+  /subscriptions/{id}/approve:
+    patch:
+      operationId: approveSubscription
+      tags: [subscriptions]
+      summary: Approve a subscription request (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionRequest"
+
+  /subscriptions/{id}/reject:
+    patch:
+      operationId: rejectSubscription
+      tags: [subscriptions]
+      summary: Reject a subscription request (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionRejectInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionRequest"
+
+  # ── Admin ─────────────────────────────────────────────────────────────────
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Platform-wide statistics (admin only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+# ── Schemas ───────────────────────────────────────────────────────────────────
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    # Auth
+    RegisterInput:
+      type: object
+      required: [username, password, fullName]
+      properties:
+        username:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 6
+        fullName:
+          type: string
+          minLength: 1
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required: [id, username, fullName, role, setupComplete, createdAt]
+      properties:
+        id:
+          type: number
+        username:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [student, admin]
+        setupComplete:
+          type: boolean
+        university:
+          type: ["string", "null"]
+        major:
+          type: ["string", "null"]
+        yearOfStudy:
+          type: ["number", "null"]
+        specialization:
+          type: ["string", "null"]
+        skillLevel:
+          type: ["string", "null"]
+        knownLanguages:
+          type: array
+          items:
+            type: string
+        subscriptionActive:
+          type: boolean
+        subscriptionExpiry:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # Profile / Onboarding
+    SetupInput:
+      type: object
+      required: [specialization, skillLevel]
+      properties:
+        university:
+          type: string
+        major:
+          type: string
+        yearOfStudy:
+          type: number
+        specialization:
+          type: string
+        skillAnswers:
+          type: array
+          items:
+            type: string
+        skillLevel:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        knownLanguages:
+          type: array
+          items:
+            type: string
+
+    ProfileUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        university:
+          type: string
+        major:
+          type: string
+        yearOfStudy:
+          type: number
+        specialization:
+          type: string
+        skillLevel:
+          type: string
+        knownLanguages:
+          type: array
+          items:
+            type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+
+    # Dashboard
+    DashboardStats:
+      type: object
+      required: [savedLectures, completedLectures, chatSessions, quizzesTaken, debugSessions, avgQuizScore]
+      properties:
+        savedLectures:
+          type: number
+        completedLectures:
+          type: number
+        chatSessions:
+          type: number
+        quizzesTaken:
+          type: number
+        debugSessions:
+          type: number
+        avgQuizScore:
+          type: number
+
+    RecentActivity:
+      type: object
+      required: [recentLectures, recentChats, recentQuizzes]
+      properties:
+        recentLectures:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lecture"
+        recentChats:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatSession"
+        recentQuizzes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Quiz"
+
+    # Lectures
+    Lecture:
+      type: object
+      required: [id, title, youtubeId, instructor, specialization, difficulty, createdAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        youtubeId:
+          type: string
+        youtubeUrl:
+          type: string
+        instructor:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        specialization:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        durationMinutes:
+          type: ["number", "null"]
+        curriculumId:
+          type: ["number", "null"]
+        curriculumName:
+          type: ["string", "null"]
+        isSaved:
+          type: boolean
+        isCompleted:
+          type: boolean
+        createdAt:
+          type: string
+
+    LectureInput:
+      type: object
+      required: [title, youtubeUrl, specialization, difficulty]
+      properties:
+        title:
+          type: string
+        youtubeUrl:
+          type: string
+        instructor:
+          type: string
+        description:
+          type: string
+        specialization:
+          type: string
+        difficulty:
+          type: string
+        durationMinutes:
+          type: number
+        curriculumId:
+          type: number
+
+    LectureUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        youtubeUrl:
+          type: string
+        instructor:
+          type: string
+        description:
+          type: string
+        specialization:
+          type: string
+        difficulty:
+          type: string
+        durationMinutes:
+          type: number
+        curriculumId:
+          type: ["number", "null"]
+
+    # Curricula
+    Curriculum:
+      type: object
+      required: [id, name, specialization, createdAt]
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        specialization:
+          type: string
+        lectureCount:
+          type: number
+        createdAt:
+          type: string
+
+    CurriculumInput:
+      type: object
+      required: [name, specialization]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        specialization:
+          type: string
+
+    CurriculumUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        specialization:
+          type: string
+
+    # Chat
+    ChatSession:
+      type: object
+      required: [id, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        messageCount:
+          type: number
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ChatSessionInput:
+      type: object
+      properties:
+        title:
+          type: string
+
+    ChatMessage:
+      type: object
+      required: [id, sessionId, role, content, createdAt]
+      properties:
+        id:
+          type: number
+        sessionId:
+          type: number
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+
+    ChatMessageInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    # Summary
+    Summary:
+      type: object
+      required: [id, title, topic, summary, keyPoints, createdAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: ["string", "null"]
+        topic:
+          type: string
+        originalText:
+          type: string
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        technicalTerms:
+          type: array
+          items:
+            type: string
+        difficultyLevel:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+
+    SummaryInput:
+      type: object
+      required: [text, topic]
+      properties:
+        text:
+          type: string
+          minLength: 50
+        topic:
+          type: string
+        title:
+          type: string
+
+    # Code Debugger
+    DebugSession:
+      type: object
+      required: [id, language, code, status, createdAt]
+      properties:
+        id:
+          type: number
+        language:
+          type: string
+        code:
+          type: string
+        status:
+          type: string
+          enum: [clean, has_errors]
+        efficiencyScore:
+          type: ["number", "null"]
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeError"
+        explanation:
+          type: ["string", "null"]
+        bestPractices:
+          type: array
+          items:
+            type: string
+        fixedCode:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CodeError:
+      type: object
+      required: [line, type, message, fix]
+      properties:
+        line:
+          type: number
+        type:
+          type: string
+        message:
+          type: string
+        fix:
+          type: string
+
+    DebugInput:
+      type: object
+      required: [code, language]
+      properties:
+        code:
+          type: string
+        language:
+          type: string
+
+    # Quiz
+    Quiz:
+      type: object
+      required: [id, topic, quizType, questionCount, createdAt]
+      properties:
+        id:
+          type: number
+        topic:
+          type: string
+        quizType:
+          type: string
+          enum: [multiple_choice, true_false, coding, mixed]
+        questionCount:
+          type: number
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+        bestScore:
+          type: ["number", "null"]
+        attemptCount:
+          type: number
+        createdAt:
+          type: string
+
+    QuizQuestion:
+      type: object
+      required: [id, question, type, options]
+      properties:
+        id:
+          type: number
+        question:
+          type: string
+        type:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: ["string", "null"]
+        explanation:
+          type: ["string", "null"]
+
+    QuizGenerateInput:
+      type: object
+      required: [text, quizType, questionCount]
+      properties:
+        text:
+          type: string
+        quizType:
+          type: string
+          enum: [multiple_choice, true_false, coding, mixed]
+        questionCount:
+          type: number
+          minimum: 3
+          maximum: 15
+        topic:
+          type: string
+
+    QuizSubmitInput:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            type: string
+
+    QuizResult:
+      type: object
+      required: [score, totalQuestions, percentage, feedback]
+      properties:
+        score:
+          type: number
+        totalQuestions:
+          type: number
+        percentage:
+          type: number
+        feedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizFeedback"
+
+    QuizFeedback:
+      type: object
+      required: [questionId, correct, yourAnswer, correctAnswer]
+      properties:
+        questionId:
+          type: number
+        correct:
+          type: boolean
+        yourAnswer:
+          type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: ["string", "null"]
+
+    QuizAttempt:
+      type: object
+      required: [id, score, percentage, createdAt]
+      properties:
+        id:
+          type: number
+        score:
+          type: number
+        percentage:
+          type: number
+        createdAt:
+          type: string
+
+    # Career
+    CareerRecommendation:
+      type: object
+      required: [careerPaths, learningMap, suggestedLanguages, skillGaps, immediateSteps]
+      properties:
+        careerPaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/CareerPath"
+        learningMap:
+          type: array
+          items:
+            $ref: "#/components/schemas/LearningPhase"
+        suggestedLanguages:
+          type: array
+          items:
+            $ref: "#/components/schemas/LanguageSuggestion"
+        skillGaps:
+          type: array
+          items:
+            type: string
+        immediateSteps:
+          type: array
+          items:
+            type: string
+
+    CareerPath:
+      type: object
+      required: [title, matchScore, demandLevel, avgSalary, requiredSkills]
+      properties:
+        title:
+          type: string
+        matchScore:
+          type: number
+        demandLevel:
+          type: string
+          enum: [high, medium, low]
+        avgSalary:
+          type: string
+        requiredSkills:
+          type: array
+          items:
+            type: string
+
+    LearningPhase:
+      type: object
+      required: [phase, duration, skills, resources]
+      properties:
+        phase:
+          type: string
+        duration:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        resources:
+          type: array
+          items:
+            type: string
+
+    LanguageSuggestion:
+      type: object
+      required: [language, priority, reason]
+      properties:
+        language:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+        reason:
+          type: string
+
+    # Subscriptions
+    SubscriptionStatus:
+      type: object
+      required: [active, plan]
+      properties:
+        active:
+          type: boolean
+        plan:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
+        pendingRequest:
+          type: boolean
+        pendingRequestDate:
+          type: ["string", "null"]
+
+    SubscriptionRequestInput:
+      type: object
+      required: [plan, receiptUrl]
+      properties:
+        plan:
+          type: string
+          enum: ["3months", "6months", "1year"]
+        receiptUrl:
+          type: string
+
+    SubscriptionRequest:
+      type: object
+      required: [id, userId, plan, status, receiptUrl, createdAt]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        username:
+          type: ["string", "null"]
+        fullName:
+          type: ["string", "null"]
+        plan:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        receiptUrl:
+          type: string
+        rejectionReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    SubscriptionRejectInput:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    # Admin
+    AdminStats:
+      type: object
+      required: [totalUsers, totalLectures, totalQuizzes, activeSubscriptions, pendingSubscriptions]
+      properties:
+        totalUsers:
+          type: number
+        totalLectures:
+          type: number
+        totalQuizzes:
+          type: number
+        activeSubscriptions:
+          type: number
+        pendingSubscriptions:
+          type: number

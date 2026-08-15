@@ -1,0 +1,40 @@
+I am working on founding an educational and smart platform tailored for IT and Software Engineering students, and I want you to act as my Lead Software Architect & Product Manager to help me design and engineer this platform completely from scratch.
+Project Name Idea: IT-Bridge (or Smart Support Platform for IT Students).
+Please carefully review the following requirements, and then systematically provide me with the action plan, database schema, and UI/backend service designs for each of the following features:
+
+1. Core Platform Features:
+Curated Lecture Aggregator & Filter: A system to organize educational YouTube lectures, link them to university course curricula, and make them easy to access.
+Smart AI Chatbot: An advanced assistant (inspired by state-of-the-art models like Gemini Pro / GPT) to help students explain complex concepts, summarize materials, and answer academic/programming questions.
+Smart Summary Engine for Theoretical IT Courses: A tool that allows uploading or entering theoretical IT texts and materials (e.g., Networks, Cybersecurity, Software Engineering) to smartly summarize them with conceptual maps or illustrations.
+Smart Code Debugger & Sandbox:
+A mini code-writing and execution environment.
+Code checking and validation.
+If the code is correct: Highlight it and explain why it's efficient.
+If there is an error: Pinpoint the exact location of the error, and explain why the error occurred and how to fix it scientifically.
+Automated Quiz Generator: An intelligent quiz generator that creates questions and exams (multiple choice, coding questions, true/false) based on the provided material or file.
+Level Assessment & Specialization Input: A student level assessment system upon registration, mapping their precise sub-specialization within IT (Programming, Networks, Cybersecurity, etc.).
+Career & Growth Advisor: Analyzing student performance and level, and suggesting developmental paths, programming languages, and future career fields matching their skills.
+What I need from you right now to start:
+Propose a suitable Tech Stack for a fast, scalable web platform (e.g., React/Next.js for frontend, a robust backend, and a flexible database).
+Design the core Database Schema to store users, specializations, lectures, codes, and quizzes.
+Outline an MVP (Minimum Viable Product) implementation plan for the first version we should start coding right now.
+Start now by analyzing the project and give me the first step....................I need to add a secure Subscription and Payment Management module to the IT-Bridge platform. Please help me architect and implement this workflow:
+1. Business Logic & Pricing Plans:
+I am using direct 'CliQ' transfers to my company 'Norv' at Bank Al Etihad. The account holder is: HAMMAM ALI OMAR TAHA.
+I have three subscription plans:
+
+3 Months: 10 JOD
+6 Months: 19 JOD
+1 Year: 55 JOD
+2. The Workflow Requirements:
+
+User Interface: Users should choose a plan, see the payment details (Account holder name + Bank name), and be provided with a file upload field to attach their CliQ transaction screenshot.
+Admin Dashboard: Since we are using manual transfers, I need an Admin Panel where I can view these uploaded receipts, verify the transaction, and manually 'Approve' the user.
+Subscription Management: Once approved, the backend must set the user's status to 'Active' and calculate an expiry date based on the plan chosen (e.g., Today + 3 months, 6 months, or 1 year).
+Access Control: Create a middleware or a security guard that checks the is_active status and the expiry_date in the database for every user. If the subscription is expired, the system should redirect them to the payment/renew page.
+3. Implementation Request:
+Please guide me on:
+
+Necessary updates to the Database Schema (e.g., subscriptions table, expiry_date field in users table).
+The Workflow logic for handling the upload and the admin approval state.
+The Middleware/Logic to enforce access based on the subscription timer."
