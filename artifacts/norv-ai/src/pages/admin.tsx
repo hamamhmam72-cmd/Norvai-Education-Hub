@@ -167,7 +167,7 @@ function AdminSubscriptionsTab() {
                   <td className="px-6 py-4 font-medium">
                     {req.fullName} <span className="text-xs text-muted-foreground block">@{req.username}</span>
                   </td>
-                  <td className="px-6 py-4 capitalize">{req.plan.replace("months", " Months")}</td>
+                  <td className="px-6 py-4 capitalize">{req.plan?.replace("months", " Months") ?? "-"}</td>
                   <td className="px-6 py-4">{new Date(req.createdAt).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     <a href={req.receiptUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
@@ -199,8 +199,8 @@ function AdminUsersTab() {
   const { data: users, isLoading } = useGetAdminUsers();
 
   const filteredUsers = users?.filter(u => 
-    u.username.toLowerCase().includes(search.toLowerCase()) || 
-    u.fullName.toLowerCase().includes(search.toLowerCase())
+    (u.username ?? "").toLowerCase().includes(search.toLowerCase()) || 
+    (u.fullName ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (

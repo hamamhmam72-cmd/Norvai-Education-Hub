@@ -67,7 +67,7 @@ SUMMARY:
 ${result.summary}
 
 KEY POINTS:
-${result.keyPoints.map(p => `- ${p}`).join("\n")}
+${(result.keyPoints ?? []).map(p => `- ${p}`).join("\n")}
 
 TERMS:
 ${result.technicalTerms?.join(", ")}

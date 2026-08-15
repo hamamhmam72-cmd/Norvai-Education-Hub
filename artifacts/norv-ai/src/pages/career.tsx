@@ -66,7 +66,7 @@ export default function CareerAdvisor() {
               Recommended Roles
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.careerPaths.map((path, i) => (
+              {(data.careerPaths ?? []).map((path, i) => (
                 <Card key={i} className="border-border/50 shadow-sm hover-elevate transition-all overflow-hidden flex flex-col group relative">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 to-transparent" />
                   <CardContent className="p-6 flex-1 flex flex-col">
@@ -101,13 +101,13 @@ export default function CareerAdvisor() {
                     <div className="mt-auto pt-4 border-t border-border/50">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Required Skills</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {path.requiredSkills.slice(0, 5).map(skill => (
+                        {(path.requiredSkills ?? []).slice(0, 5).map(skill => (
                           <span key={skill} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">
                             {skill}
                           </span>
                         ))}
-                        {path.requiredSkills.length > 5 && (
-                          <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">+{path.requiredSkills.length - 5}</span>
+                        {(path.requiredSkills ?? []).length > 5 && (
+                          <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">+{(path.requiredSkills ?? []).length - 5}</span>
                         )}
                       </div>
                     </div>
@@ -127,7 +127,7 @@ export default function CareerAdvisor() {
               <div className="bg-card border border-border/50 rounded-2xl p-6 md:p-8 shadow-sm relative">
                 <div className="absolute left-[39px] md:left-[51px] top-10 bottom-10 w-0.5 bg-border" />
                 <div className="space-y-8 relative">
-                  {data.learningMap.map((phase, i) => (
+                  {(data.learningMap ?? []).map((phase, i) => (
                     <div key={i} className="flex gap-4 md:gap-6 relative">
                       <div className="size-10 md:size-14 rounded-full bg-background border-2 border-primary flex items-center justify-center shrink-0 z-10 shadow-sm text-primary font-bold shadow-primary/20">
                         {i + 1}
@@ -143,7 +143,7 @@ export default function CareerAdvisor() {
                               <Sparkles className="size-4 text-amber-500" /> Focus Skills
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {phase.skills.map(s => <Badge key={s} variant="outline" className="bg-background">{s}</Badge>)}
+                              {(phase.skills ?? []).map(s => <Badge key={s} variant="outline" className="bg-background">{s}</Badge>)}
                             </div>
                           </div>
                           <div className="pt-2 border-t border-border/50">
@@ -151,7 +151,7 @@ export default function CareerAdvisor() {
                               <BookOpen className="size-4 text-blue-500" /> Resources
                             </p>
                             <ul className="grid sm:grid-cols-2 gap-2">
-                              {phase.resources.map(r => (
+                              {(phase.resources ?? []).map(r => (
                                 <li key={r} className="text-sm text-muted-foreground flex items-start gap-2">
                                   <ArrowRight className="size-3 shrink-0 mt-1 text-primary/50" />
                                   <span className="leading-snug">{r}</span>
@@ -177,11 +177,11 @@ export default function CareerAdvisor() {
                   Tech Stack to Learn
                 </h2>
                 <div className="space-y-3">
-                  {data.suggestedLanguages.map((lang, i) => (
+                  {(data.suggestedLanguages ?? []).map((lang, i) => (
                     <Card key={i} className="border-border/50 shadow-sm">
                       <CardContent className="p-4 flex gap-4">
                         <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
-                          {lang.language.substring(0, 2)}
+                          {lang.language?.substring(0, 2) ?? "?"}
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
@@ -208,7 +208,7 @@ export default function CareerAdvisor() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {data.skillGaps.map((gap, i) => (
+                    {(data.skillGaps ?? []).map((gap, i) => (
                       <li key={i} className="flex gap-3 text-sm text-foreground/80 items-start">
                         <div className="size-1.5 rounded-full bg-orange-500 shrink-0 mt-1.5" />
                         <span className="leading-snug">{gap}</span>
@@ -228,7 +228,7 @@ export default function CareerAdvisor() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {data.immediateSteps.map((step, i) => (
+                    {(data.immediateSteps ?? []).map((step, i) => (
                       <li key={i} className="flex gap-3 text-sm font-medium items-start">
                         <CheckCircle2 className="size-4 text-primary shrink-0 mt-0.5" />
                         <span className="leading-snug">{step}</span>

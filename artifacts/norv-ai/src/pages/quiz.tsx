@@ -235,12 +235,12 @@ export default function QuizGenerator() {
           <Card className="border-border/50 shadow-md">
             <CardHeader className="bg-sidebar/5 border-b border-border/50 pb-6">
               <CardTitle className="text-xl leading-relaxed font-semibold">
-                {currentQuestionIdx + 1}. {quiz.questions[currentQuestionIdx].question}
+                {currentQuestionIdx + 1}. {quiz.questions[currentQuestionIdx]?.question}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-3">
-                {quiz.questions[currentQuestionIdx].options.map((opt, i) => {
+                {(quiz.questions[currentQuestionIdx]?.options ?? []).map((opt, i) => {
                   const isSelected = answers[currentQuestionIdx] === opt;
                   return (
                     <button

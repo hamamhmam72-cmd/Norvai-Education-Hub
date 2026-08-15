@@ -221,41 +221,23 @@ export default function Dashboard() {
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
                 </div>
-              ) : recent && (recent.recentLectures.length > 0 || recent.recentChats.length > 0 || recent.recentQuizzes.length > 0) ? (
+              ) : Array.isArray(recent) && recent.length > 0 ? (
                 <div className="divide-y divide-border/50">
-                  {recent.recentLectures.slice(0, 3).map(l => (
-                    <div key={`l-${l.id}`} className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
-                      <div className="mt-0.5 rounded bg-blue-500/10 p-2 text-blue-600 dark:text-blue-400">
-                        <Video className="size-4" />
+                  {recent.map((activity, idx) => {
+                    const isLecture = activity.type === "lecture_completed";
+                    const isDebug = activity.type === "debug_session";
+                    return (
+                      <div key={idx} className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
+                        <div className={`mt-0.5 rounded p-2 ${isLecture ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : isDebug ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" : "bg-pink-500/10 text-pink-600 dark:text-pink-400"}`}>
+                          {isLecture ? <Video className="size-4" /> : isDebug ? <MessageSquare className="size-4" /> : <BrainCircuit className="size-4" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium line-clamp-1">{activity.description}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(activity.timestamp).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium line-clamp-1">{l.title}</p>
-                        <p className="text-xs text-muted-foreground">Watched {new Date(l.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {recent.recentChats.slice(0, 2).map(c => (
-                    <div key={`c-${c.id}`} className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
-                      <div className="mt-0.5 rounded bg-purple-500/10 p-2 text-purple-600 dark:text-purple-400">
-                        <MessageSquare className="size-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium line-clamp-1">{c.title || "AI Session"}</p>
-                        <p className="text-xs text-muted-foreground">Chatted {new Date(c.updatedAt).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {recent.recentQuizzes.slice(0, 2).map(q => (
-                    <div key={`q-${q.id}`} className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
-                      <div className="mt-0.5 rounded bg-pink-500/10 p-2 text-pink-600 dark:text-pink-400">
-                        <BrainCircuit className="size-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium line-clamp-1">{q.topic} Quiz</p>
-                        <p className="text-xs text-muted-foreground">Score: {q.bestScore}%</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center">
