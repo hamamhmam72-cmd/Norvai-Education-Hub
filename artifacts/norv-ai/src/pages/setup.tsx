@@ -99,8 +99,10 @@ export default function Setup() {
     completeSetupMutation.mutate(
       { data: payload },
       {
-        onSuccess: (user) => {
-          updateUser(user);
+        onSuccess: (data: any) => {
+          // API returns { user: {...} }; unwrap before storing
+          const actualUser = data?.user ?? data;
+          updateUser(actualUser);
           setLocation("/dashboard");
         },
         onError: (err: any) => {
