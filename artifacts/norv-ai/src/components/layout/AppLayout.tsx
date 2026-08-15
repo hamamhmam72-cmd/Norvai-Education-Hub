@@ -1,5 +1,7 @@
 import { Link, useLocation, Redirect } from "wouter";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useLang } from "@/context/LanguageContext";
 import {
   SidebarProvider,
   Sidebar,
@@ -28,34 +30,40 @@ import {
   LogOut,
   Shield,
   Loader2,
+  Sun,
+  Moon,
+  Languages,
 } from "lucide-react";
 import { ReactNode } from "react";
 import { useLogout } from "@workspace/api-client-react";
-
-const mainNavItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Lectures", url: "/lectures", icon: Video },
-  { title: "AI Chatbot", url: "/chat", icon: MessageSquare },
-  { title: "Smart Summary", url: "/summary", icon: FileText },
-  { title: "Code Debugger", url: "/debug", icon: Terminal },
-  { title: "Quiz Generator", url: "/quiz", icon: BrainCircuit },
-  { title: "Career Advisor", url: "/career", icon: Compass },
-];
-
-const secondaryNavItems = [
-  { title: "Profile", url: "/profile", icon: UserCircle },
-  { title: "Subscription", url: "/subscription", icon: CreditCard },
-];
+import { Button } from "@/components/ui/button";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLang, t } = useLang();
   const [location] = useLocation();
   const logoutMutation = useLogout();
+
+  const mainNavItems = [
+    { titleKey: "dashboard" as const, url: "/dashboard", icon: LayoutDashboard },
+    { titleKey: "lectures" as const, url: "/lectures", icon: Video },
+    { titleKey: "aiChatbot" as const, url: "/chat", icon: MessageSquare },
+    { titleKey: "smartSummary" as const, url: "/summary", icon: FileText },
+    { titleKey: "codeDebugger" as const, url: "/debug", icon: Terminal },
+    { titleKey: "quizGenerator" as const, url: "/quiz", icon: BrainCircuit },
+    { titleKey: "careerAdvisor" as const, url: "/career", icon: Compass },
+  ];
+
+  const secondaryNavItems = [
+    { titleKey: "profile" as const, url: "/profile", icon: UserCircle },
+    { titleKey: "subscription" as const, url: "/subscription", icon: CreditCard },
+  ];
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => logout(),
-      onError: () => logout()
+      onError: () => logout(),
     });
   };
 
@@ -70,53 +78,66 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Redirects
-  if (!user && !isPublicRoute) {
-    return <Redirect to="/login" replace />;
-  }
-
-  if (user && !user.setupComplete && !isSetupRoute && !isPublicRoute) {
-    return <Redirect to="/setup" replace />;
-  }
-
-  if (user && user.setupComplete && isPublicRoute) {
-    return <Redirect to="/dashboard" replace />;
-  }
-
-  // Admin trying to access student pages? Admin panel is just another page, no strict isolation needed yet except /admin protection which we'll handle in the admin page itself or here.
-  // We'll protect /admin in the App Router or here. Let's do it in the Router.
+  if (!user && !isPublicRoute) return <Redirect to="/login" replace />;
+  if (user && !user.setupComplete && !isSetupRoute && !isPublicRoute) return <Redirect to="/setup" replace />;
+  if (user && user.setupComplete && isPublicRoute) return <Redirect to="/dashboard" replace />;
 
   if (isPublicRoute || isSetupRoute) {
-    return <main className="min-h-screen bg-background">{children}</main>;
+    return (
+      <main className="min-h-screen bg-background">
+        {/* Theme/Lang toggles on public pages */}
+        <div className="absolute top-4 right-4 flex gap-2 z-50">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="rounded-full h-9 w-9"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleLang}
+            className="rounded-full h-9 w-9 font-bold text-xs"
+            title="Toggle Arabic / English"
+          >
+            {lang === "en" ? "AR" : "EN"}
+          </Button>
+        </div>
+        {children}
+      </main>
+    );
   }
 
   return (
     <SidebarProvider>
       <Sidebar variant="inset" className="border-r border-sidebar-border/50">
         <SidebarHeader className="flex h-16 items-center justify-center border-b border-sidebar-border px-6">
-          <div className="flex items-center gap-2 font-bold text-lg tracking-tight text-sidebar-primary-foreground">
+          <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
             <div className="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-primary-foreground">
               <BrainCircuit className="size-5" />
             </div>
             <span className="text-sidebar-foreground">Norv_ai</span>
           </div>
         </SidebarHeader>
-        
+
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Learning Tools</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("learningTools")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {mainNavItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
+                  <SidebarMenuItem key={item.titleKey}>
+                    <SidebarMenuButton
+                      asChild
                       isActive={location === item.url || location.startsWith(item.url + "/")}
-                      tooltip={item.title}
+                      tooltip={t(item.titleKey)}
                     >
                       <Link href={item.url} className="flex items-center gap-2">
                         <item.icon className="size-4" />
-                        <span>{item.title}</span>
+                        <span>{t(item.titleKey)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -126,34 +147,34 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>Settings</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("settings")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {secondaryNavItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
+                  <SidebarMenuItem key={item.titleKey}>
+                    <SidebarMenuButton
+                      asChild
                       isActive={location === item.url}
-                      tooltip={item.title}
+                      tooltip={t(item.titleKey)}
                     >
                       <Link href={item.url} className="flex items-center gap-2">
                         <item.icon className="size-4" />
-                        <span>{item.title}</span>
+                        <span>{t(item.titleKey)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-                
+
                 {user?.role === "admin" && (
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       isActive={location.startsWith("/admin")}
-                      tooltip="Admin Panel"
+                      tooltip={t("adminPanel")}
                     >
                       <Link href="/admin" className="flex items-center gap-2">
                         <Shield className="size-4 text-primary" />
-                        <span className="text-primary font-medium">Admin Panel</span>
+                        <span className="text-primary font-medium">{t("adminPanel")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -175,21 +196,47 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={handleLogout} 
+              <SidebarMenuButton
+                onClick={handleLogout}
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 <LogOut className="size-4" />
-                <span>Log out</span>
+                <span>{t("logout")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      
+
       <SidebarInset className="flex flex-col flex-1 min-w-0 bg-background">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger className="-ml-1" />
+          <div className="flex items-center gap-2">
+            {/* Language toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleLang}
+              className="h-8 gap-1.5 rounded-full px-3 text-xs font-semibold"
+              title="Toggle Arabic / English"
+            >
+              <Languages className="size-3.5" />
+              {lang === "en" ? "العربية" : "English"}
+            </Button>
+            {/* Theme toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="h-8 w-8 rounded-full"
+              title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+            >
+              {theme === "dark"
+                ? <Sun className="size-4 text-yellow-400" />
+                : <Moon className="size-4" />
+              }
+            </Button>
+          </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 bg-muted/20">
           {children}

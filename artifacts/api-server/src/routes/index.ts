@@ -12,6 +12,7 @@ import quizRouter from "./quiz.js";
 import careerRouter from "./career.js";
 import subscriptionsRouter from "./subscriptions.js";
 import adminRouter from "./admin.js";
+import uploadRouter from "./upload.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(quizRouter);
 router.use(careerRouter);
 router.use(subscriptionsRouter);
 router.use(adminRouter);
+router.use(uploadRouter);
 
 export default router;

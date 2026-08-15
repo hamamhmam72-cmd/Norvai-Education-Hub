@@ -74,8 +74,8 @@ export default function Chat() {
   const { data: sessions, isLoading: sessionsLoading } = useGetChatSessions();
   
   const { data: messages, isLoading: messagesLoading } = useGetChatMessages(
-    activeSessionId as number,
-    { query: { enabled: !!activeSessionId } }
+    activeSessionId ?? 0,
+    { query: { enabled: !!activeSessionId, queryKey: activeSessionId ? getGetChatMessagesQueryKey(activeSessionId) : [] } }
   );
 
   const createSession = useCreateChatSession();

@@ -24,14 +24,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Table,
-  Body,
-  Cell,
-  Head,
-  Header,
-  HeaderCell,
-  Row,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-// Note: We don't have a complex Table component exported in the generic list, I'll use standard HTML tables with tailwind inside a Card for simplicity and robustness since shadcn Table structure varies.
 
 export default function AdminPanel() {
   const { user } = useAuth();
