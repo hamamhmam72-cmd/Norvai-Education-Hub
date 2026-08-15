@@ -9,4 +9,6 @@
 export interface AccessActivationResult {
   activated: boolean;
   accessActivated: boolean;
+  /** @nullable */
+  trialExpiresAt?: string | null;
 }

@@ -49,14 +49,19 @@ router.post("/access/activate", requireAuth, async (req, res) => {
     return;
   }
 
+  const trialExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
   const [user] = await db
     .update(usersTable)
-    .set({ accessActivated: true })
+    .set({ accessActivated: true, trialExpiresAt })
     .where(eq(usersTable.id, uid))
     .returning();
 
   attempts.delete(uid);
-  res.json({ activated: true, accessActivated: user.accessActivated });
+  res.json({
+    activated: true,
+    accessActivated: user.accessActivated,
+    trialExpiresAt: user.trialExpiresAt?.toISOString() ?? null,
+  });
 });
 
 export default router;

@@ -24,6 +24,8 @@ export const usersTable = pgTable("users", {
   knownLanguages: text("known_languages").array().notNull().default([]),
   avatarUrl: text("avatar_url"),
   accessActivated: boolean("access_activated").notNull().default(false),
+  /** Set when a free activation code is used; access revoked when this timestamp passes. */
+  trialExpiresAt: timestamp("trial_expires_at", { withTimezone: true }),
   subscriptionActive: boolean("subscription_active").notNull().default(false),
   subscriptionExpiry: timestamp("subscription_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })

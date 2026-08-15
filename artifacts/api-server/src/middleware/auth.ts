@@ -43,6 +43,7 @@ export function requireActiveAccess(req: Request, res: Response, next: NextFunct
           subscriptionActive: usersTable.subscriptionActive,
           subscriptionExpiry: usersTable.subscriptionExpiry,
           accessActivated: usersTable.accessActivated,
+          trialExpiresAt: usersTable.trialExpiresAt,
         })
         .from(usersTable)
         .where(eq(usersTable.id, req.user!.userId))
@@ -51,16 +52,33 @@ export function requireActiveAccess(req: Request, res: Response, next: NextFunct
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
+      const now = new Date();
       const subscriptionValid =
         user.subscriptionActive &&
-        (!user.subscriptionExpiry || user.subscriptionExpiry > new Date());
-      if (subscriptionValid || user.accessActivated) {
+        (!user.subscriptionExpiry || user.subscriptionExpiry > now);
+      const trialValid =
+        user.accessActivated &&
+        !!user.trialExpiresAt &&
+        user.trialExpiresAt > now;
+      if (subscriptionValid || trialValid) {
         next();
         return;
       }
+      // Determine why access was denied for a helpful error code
+      const code =
+        !user.subscriptionActive && !user.accessActivated
+          ? "ACCESS_REQUIRED"
+          : user.accessActivated && user.trialExpiresAt && user.trialExpiresAt <= now
+          ? "TRIAL_EXPIRED"
+          : "SUBSCRIPTION_EXPIRED";
       res.status(403).json({
-        error: "Access not activated. Subscribe or enter a valid activation code.",
-        code: "ACCESS_REQUIRED",
+        error:
+          code === "TRIAL_EXPIRED"
+            ? "Your 24-hour free trial has expired. Please subscribe or re-enter a valid code."
+            : code === "SUBSCRIPTION_EXPIRED"
+            ? "Your subscription has expired. Please renew to continue."
+            : "Access not activated. Subscribe or enter a valid activation code.",
+        code,
       });
     } catch (err) {
       next(err);

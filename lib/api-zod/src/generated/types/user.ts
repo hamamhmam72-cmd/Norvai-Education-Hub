@@ -27,6 +27,8 @@ export interface User {
   /** @nullable */
   avatarUrl?: string | null;
   accessActivated?: boolean;
+  /** @nullable */
+  trialExpiresAt?: string | null;
   subscriptionActive?: boolean;
   /** @nullable */
   subscriptionExpiry?: string | null;

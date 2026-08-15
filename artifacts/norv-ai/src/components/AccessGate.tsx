@@ -5,7 +5,7 @@ import { useLang } from "@/context/LanguageContext";
 import { useActivateAccess, getMe } from "@workspace/api-client-react";
 import {
   Lock, KeyRound, Loader2, CreditCard,
-  Sparkles, ShieldCheck, ArrowRight,
+  Sparkles, ShieldCheck, ArrowRight, Timer, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,14 @@ import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
 
 // Routes always accessible — users must be able to set up, subscribe, or activate
+// Routes always accessible — users must be able to set up, subscribe, or activate
 const UNGATED_ROUTES = ["/profile", "/subscription", "/feedback", "/setup"];
+
+/** Returns true when a timestamp string is set and still in the future. */
+function isFutureDate(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  return new Date(iso).getTime() > Date.now();
+}
 
 export function AccessGate({ children }: { children: ReactNode }) {
   const { user, updateUser } = useAuth();
@@ -25,12 +32,28 @@ export function AccessGate({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const activateAccess = useActivateAccess();
 
-  const gated =
-    !!user &&
-    user.role !== "admin" &&
-    !user.subscriptionActive &&
-    !(user as any).accessActivated &&
-    !UNGATED_ROUTES.some((r) => location === r || location.startsWith(r + "/"));
+  const u = user as any;
+  const subscriptionValid =
+    u?.subscriptionActive &&
+    isFutureDate(u?.subscriptionExpiry ?? null) || (u?.subscriptionActive && !u?.subscriptionExpiry);
+  const trialValid =
+    u?.accessActivated && isFutureDate(u?.trialExpiresAt);
+
+  const isUngated = !user ||
+    user.role === "admin" ||
+    subscriptionValid ||
+    trialValid ||
+    UNGATED_ROUTES.some((r) => location === r || location.startsWith(r + "/"));
+
+  const gated = !isUngated;
+
+  // Determine reason for gating so we can show a helpful message
+  const gateReason: "trial_expired" | "sub_expired" | "no_access" =
+    u?.accessActivated && !trialValid && u?.trialExpiresAt
+      ? "trial_expired"
+      : u?.subscriptionActive && !subscriptionValid
+      ? "sub_expired"
+      : "no_access";
 
   if (!gated) return <>{children}</>;
 
@@ -72,15 +95,38 @@ export function AccessGate({ children }: { children: ReactNode }) {
 
         <div className="p-6 space-y-6">
 
-          {/* Icon + heading */}
+          {/* Icon + heading — adapts to reason */}
           <div className="flex flex-col items-center text-center gap-3">
-            <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner">
-              <Lock className="size-7 text-primary" />
+            <div className={cn(
+              "size-14 rounded-2xl flex items-center justify-center shadow-inner",
+              gateReason === "trial_expired"
+                ? "bg-amber-500/10"
+                : gateReason === "sub_expired"
+                ? "bg-red-500/10"
+                : "bg-primary/10",
+            )}>
+              {gateReason === "trial_expired" ? (
+                <Timer className="size-7 text-amber-500" />
+              ) : gateReason === "sub_expired" ? (
+                <RefreshCw className="size-7 text-red-500" />
+              ) : (
+                <Lock className="size-7 text-primary" />
+              )}
             </div>
             <div>
-              <h2 className="text-xl font-bold">{t("accessRequired")}</h2>
+              <h2 className="text-xl font-bold">
+                {gateReason === "trial_expired"
+                  ? t("trialExpiredTitle")
+                  : gateReason === "sub_expired"
+                  ? t("subExpiredTitle")
+                  : t("accessRequired")}
+              </h2>
               <p className="text-sm text-muted-foreground leading-relaxed mt-1 max-w-xs">
-                {t("accessGateDesc")}
+                {gateReason === "trial_expired"
+                  ? t("trialExpiredDesc")
+                  : gateReason === "sub_expired"
+                  ? t("subExpiredDesc")
+                  : t("accessGateDesc")}
               </p>
             </div>
           </div>

@@ -38,6 +38,7 @@ import {
 import { ReactNode } from "react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { AccessCountdown } from "@/components/AccessCountdown";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, logout } = useAuth();
@@ -187,6 +188,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </SidebarContent>
 
         <SidebarFooter className="border-t border-sidebar-border p-4">
+          <AccessCountdown />
           <div className="flex items-center gap-3 mb-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted font-bold text-muted-foreground uppercase">
               {user?.fullName?.charAt(0) || "U"}

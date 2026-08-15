@@ -48,6 +48,7 @@ export const RegisterResponse = zod.object({
   "knownLanguages": zod.array(zod.string()).optional(),
   "avatarUrl": zod.string().nullish(),
   "accessActivated": zod.boolean().optional(),
+  "trialExpiresAt": zod.string().nullish(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -79,6 +80,7 @@ export const LoginResponse = zod.object({
   "knownLanguages": zod.array(zod.string()).optional(),
   "avatarUrl": zod.string().nullish(),
   "accessActivated": zod.boolean().optional(),
+  "trialExpiresAt": zod.string().nullish(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -111,6 +113,7 @@ export const GetMeResponse = zod.object({
   "knownLanguages": zod.array(zod.string()).optional(),
   "avatarUrl": zod.string().nullish(),
   "accessActivated": zod.boolean().optional(),
+  "trialExpiresAt": zod.string().nullish(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -144,6 +147,7 @@ export const CompleteSetupResponse = zod.object({
   "knownLanguages": zod.array(zod.string()).optional(),
   "avatarUrl": zod.string().nullish(),
   "accessActivated": zod.boolean().optional(),
+  "trialExpiresAt": zod.string().nullish(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -178,6 +182,7 @@ export const UpdateProfileResponse = zod.object({
   "knownLanguages": zod.array(zod.string()).optional(),
   "avatarUrl": zod.string().nullish(),
   "accessActivated": zod.boolean().optional(),
+  "trialExpiresAt": zod.string().nullish(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1016,6 +1021,7 @@ export const GetAdminUsersResponseItem = zod.object({
   "knownLanguages": zod.array(zod.string()).optional(),
   "avatarUrl": zod.string().nullish(),
   "accessActivated": zod.boolean().optional(),
+  "trialExpiresAt": zod.string().nullish(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1124,7 +1130,8 @@ export const ActivateAccessBody = zod.object({
 
 export const ActivateAccessResponse = zod.object({
   "activated": zod.boolean(),
-  "accessActivated": zod.boolean()
+  "accessActivated": zod.boolean(),
+  "trialExpiresAt": zod.string().nullish()
 })
 
 

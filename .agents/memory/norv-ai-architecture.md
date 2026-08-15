@@ -52,3 +52,11 @@ When extending the API: import from `@workspace/integrations-gemini-ai` for the 
 - OpenAPI spec is source of truth for HTTP methods: spec said PATCH /profile while server had PUT → generated client 404'd. Always match server method to spec
 - Orval zod codegen: component schema names must not collide with generated per-operation names like `<operationId>Response`
 - RTL: shadcn Sidebar takes side={isRTL ? "right" : "left"}; use logical Tailwind utilities (ms-/me-/start-/end-) not ml-/mr-
+
+## Trial / Subscription Countdown (added Aug 2026)
+- `trialExpiresAt` (timestamp) added to usersTable — set to now+24h on every activation code use; re-activating resets the clock
+- Server-side enforcement in `requireActiveAccess`: passes if `subscriptionValid` OR `trialValid` (trialExpiresAt > now)
+- Three error codes: `ACCESS_REQUIRED` / `TRIAL_EXPIRED` / `SUBSCRIPTION_EXPIRED` — AccessGate UI adapts icon+text per code
+- Frontend countdown: `components/AccessCountdown.tsx` — `setInterval` every second, shows HH:MM:SS for trials, Xd Yh for subscriptions; color-coded green→amber→red; calls `getMe()` on expiry to refresh user state and trigger gate
+- AccessGate client-side pre-check mirrors server logic: `trialValid = accessActivated && trialExpiresAt && new Date(trialExpiresAt) > now`
+- Countdown renders in the SidebarFooter (AppLayout) above the user profile block

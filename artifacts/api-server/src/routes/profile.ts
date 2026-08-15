@@ -22,6 +22,7 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     knownLanguages: u.knownLanguages,
     avatarUrl: u.avatarUrl,
     accessActivated: u.accessActivated,
+    trialExpiresAt: u.trialExpiresAt?.toISOString() ?? null,
     subscriptionActive: u.subscriptionActive,
     subscriptionExpiry: u.subscriptionExpiry?.toISOString() ?? null,
     createdAt: u.createdAt.toISOString(),

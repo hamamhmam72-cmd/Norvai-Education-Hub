@@ -1114,6 +1114,8 @@ components:
           type: ["string", "null"]
         accessActivated:
           type: boolean
+        trialExpiresAt:
+          type: ["string", "null"]
         subscriptionActive:
           type: boolean
         subscriptionExpiry:
@@ -1850,3 +1852,5 @@ components:
           type: boolean
         accessActivated:
           type: boolean
+        trialExpiresAt:
+          type: ["string", "null"]

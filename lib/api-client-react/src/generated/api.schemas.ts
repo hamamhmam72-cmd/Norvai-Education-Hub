@@ -59,6 +59,8 @@ export interface User {
   /** @nullable */
   avatarUrl?: string | null;
   accessActivated?: boolean;
+  /** @nullable */
+  trialExpiresAt?: string | null;
   subscriptionActive?: boolean;
   /** @nullable */
   subscriptionExpiry?: string | null;
@@ -567,6 +569,8 @@ export interface ActivateAccessInput {
 export interface AccessActivationResult {
   activated: boolean;
   accessActivated: boolean;
+  /** @nullable */
+  trialExpiresAt?: string | null;
 }
 
 export type GetLecturesParams = {
