@@ -219,6 +219,8 @@ export default function Subscription() {
                       <span>Send to Alias:</span>
                       <div className="bg-sidebar-accent/50 p-3 rounded-md mt-2 font-mono text-sm border border-sidebar-border">
                         <span className="text-xs text-sidebar-foreground/50 block mb-1 uppercase">Alias Name</span>
+                        Norv
+                        <span className="text-xs text-sidebar-foreground/50 block mt-2 mb-1 uppercase">Account Holder</span>
                         HAMMAM ALI OMAR TAHA
                         <span className="text-xs text-sidebar-foreground/50 block mt-2 mb-1 uppercase">Bank</span>
                         Bank Al Etihad
