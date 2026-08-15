@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { conversationsTable, messagesTable } from "@workspace/db/schema";
 import { eq, and, asc } from "drizzle-orm";
-import { ai } from "@workspace/integrations-gemini-ai";
+import { openai } from "../lib/openai.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -123,21 +123,25 @@ router.post("/chat/sessions/:id/messages", requireAuth, async (req, res) => {
 
   let fullResponse = "";
   try {
-    const stream = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash",
-      contents: history.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      })),
-      config: {
-        maxOutputTokens: 8192,
-        systemInstruction:
-          "You are Monk, an AI study assistant for IT and Software Engineering students. You help with programming concepts, debugging, algorithms, system design, and all technical topics. Be concise, precise, and educational. Use code blocks where appropriate.",
-      },
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      stream: true,
+      max_tokens: 8192,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Monk, an AI study assistant for IT and Software Engineering students. You help with programming concepts, debugging, algorithms, system design, and all technical topics. Be concise, precise, and educational. Use code blocks where appropriate.",
+        },
+        ...history.map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+      ],
     });
 
     for await (const chunk of stream) {
-      const text = chunk.text;
+      const text = chunk.choices[0]?.delta?.content ?? "";
       if (text) {
         fullResponse += text;
         res.write(`data: ${JSON.stringify({ content: text })}\n\n`);

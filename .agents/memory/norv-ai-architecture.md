@@ -25,10 +25,12 @@ auth/register, auth/login, auth/logout, auth/me, profile/setup, profile (PUT), p
 - admin / admin123
 - demo_student / student123
 
-## Gemini AI
-- Model: gemini-2.5-flash for all non-image tasks
-- systemInstruction set on chat: Monk study assistant persona
-- JSON response mode (`responseMimeType: application/json`) used for summary, debug, quiz, career
+## AI Provider
+- **OpenAI** via `OPENAI_API_KEY` secret (user's own key, not Replit-managed)
+- Client initialized in `artifacts/api-server/src/lib/openai.ts`
+- Model: `gpt-4o-mini` for all features
+- Chat: streaming via `openai.chat.completions.create({ stream: true })`, system prompt sets Monk persona
+- Summary / Debug / Quiz / Career: `response_format: { type: "json_object" }` for reliable JSON output
 
 ## How to apply
 When extending the API: import from `@workspace/integrations-gemini-ai` for the AI client. Use `requireAuth` or `requireAdmin` middleware from `artifacts/api-server/src/middleware/auth.ts`.

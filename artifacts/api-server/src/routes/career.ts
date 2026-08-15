@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, quizAttemptsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { ai } from "@workspace/integrations-gemini-ai";
+import { openai } from "../lib/openai.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -76,13 +76,14 @@ Return a JSON object with exactly these fields:
 Respond with valid JSON only.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { maxOutputTokens: 8192, responseMimeType: "application/json" },
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 8192,
+      response_format: { type: "json_object" },
+      messages: [{ role: "user", content: prompt }],
     });
 
-    const raw = response.text ?? "{}";
+    const raw = response.choices[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw);
     res.json({
       ...parsed,
