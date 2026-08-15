@@ -24,6 +24,9 @@ export interface User {
   /** @nullable */
   skillLevel?: string | null;
   knownLanguages?: string[];
+  /** @nullable */
+  avatarUrl?: string | null;
+  accessActivated?: boolean;
   subscriptionActive?: boolean;
   /** @nullable */
   subscriptionExpiry?: string | null;

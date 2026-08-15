@@ -20,9 +20,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccessActivationResult,
+  ActivateAccessInput,
   AdminStats,
   AuthResponse,
   CareerRecommendation,
+  Certificate,
   ChangePasswordInput,
   ChatMessage,
   ChatMessageInput,
@@ -35,6 +38,9 @@ import type {
   DebugInput,
   DebugSession,
   ErrorResponse,
+  Feedback,
+  FeedbackInput,
+  FeedbackWithUser,
   GetLecturesParams,
   GetSubscriptionRequestsParams,
   HealthStatus,
@@ -43,6 +49,7 @@ import type {
   LectureUpdate,
   LoginInput,
   ProfileUpdate,
+  ProgressLevel,
   Quiz,
   QuizAttempt,
   QuizGenerateInput,
@@ -3646,4 +3653,377 @@ export function useGetAdminStats<TData = Awaited<ReturnType<typeof getAdminStats
 
 
 
+
+export const getGetProgressLevelUrl = () => {
+
+
+
+
+  return `/api/progress/level`
+}
+
+/**
+ * @summary Get current learning level and progress (auto-awards certificates)
+ */
+export const getProgressLevel = async ( options?: Parameters<typeof customFetch>[1]): Promise<ProgressLevel> => {
+
+  return customFetch<ProgressLevel>(getGetProgressLevelUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProgressLevelQueryKey = () => {
+    return [
+    `/api/progress/level`
+    ] as const;
+    }
+
+
+export const getGetProgressLevelQueryOptions = <TData = Awaited<ReturnType<typeof getProgressLevel>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProgressLevel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProgressLevelQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProgressLevel>>> = ({ signal }) => getProgressLevel({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProgressLevel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProgressLevelQueryResult = NonNullable<Awaited<ReturnType<typeof getProgressLevel>>>
+export type GetProgressLevelQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get current learning level and progress (auto-awards certificates)
+ */
+
+export function useGetProgressLevel<TData = Awaited<ReturnType<typeof getProgressLevel>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProgressLevel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProgressLevelQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCertificatesUrl = () => {
+
+
+
+
+  return `/api/certificates`
+}
+
+/**
+ * @summary List earned certificates
+ */
+export const getCertificates = async ( options?: Parameters<typeof customFetch>[1]): Promise<Certificate[]> => {
+
+  return customFetch<Certificate[]>(getGetCertificatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCertificatesQueryKey = () => {
+    return [
+    `/api/certificates`
+    ] as const;
+    }
+
+
+export const getGetCertificatesQueryOptions = <TData = Awaited<ReturnType<typeof getCertificates>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCertificatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCertificates>>> = ({ signal }) => getCertificates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCertificates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCertificatesQueryResult = NonNullable<Awaited<ReturnType<typeof getCertificates>>>
+export type GetCertificatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List earned certificates
+ */
+
+export function useGetCertificates<TData = Awaited<ReturnType<typeof getCertificates>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCertificatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitFeedbackUrl = () => {
+
+
+
+
+  return `/api/feedback`
+}
+
+/**
+ * @summary Submit feedback or a suggestion
+ */
+export const submitFeedback = async (feedbackInput: FeedbackInput, options?: Parameters<typeof customFetch>[1]): Promise<Feedback> => {
+
+  return customFetch<Feedback>(getSubmitFeedbackUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(feedbackInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitFeedbackMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitFeedback>>, TError,{data: BodyType<FeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitFeedback>>, TError,{data: BodyType<FeedbackInput>}, TContext> => {
+
+const mutationKey = ['submitFeedback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitFeedback>>, {data: BodyType<FeedbackInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitFeedback(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof submitFeedback>>>
+    export type SubmitFeedbackMutationBody = BodyType<FeedbackInput>
+    export type SubmitFeedbackMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit feedback or a suggestion
+ */
+export const useSubmitFeedback = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitFeedback>>, TError,{data: BodyType<FeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitFeedback>>,
+        TError,
+        {data: BodyType<FeedbackInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitFeedbackMutationOptions(options));
+    }
+
+export const getGetFeedbackUrl = () => {
+
+
+
+
+  return `/api/feedback`
+}
+
+/**
+ * @summary List all feedback (admin only)
+ */
+export const getFeedback = async ( options?: Parameters<typeof customFetch>[1]): Promise<FeedbackWithUser[]> => {
+
+  return customFetch<FeedbackWithUser[]>(getGetFeedbackUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFeedbackQueryKey = () => {
+    return [
+    `/api/feedback`
+    ] as const;
+    }
+
+
+export const getGetFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof getFeedback>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFeedbackQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFeedback>>> = ({ signal }) => getFeedback({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFeedback>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof getFeedback>>>
+export type GetFeedbackQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all feedback (admin only)
+ */
+
+export function useGetFeedback<TData = Awaited<ReturnType<typeof getFeedback>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFeedbackQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getActivateAccessUrl = () => {
+
+
+
+
+  return `/api/access/activate`
+}
+
+/**
+ * @summary Activate app access with a free activation code
+ */
+export const activateAccess = async (activateAccessInput: ActivateAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<AccessActivationResult> => {
+
+  return customFetch<AccessActivationResult>(getActivateAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(activateAccessInput)
+  }
+);}
+
+
+
+
+
+export const getActivateAccessMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateAccess>>, TError,{data: BodyType<ActivateAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof activateAccess>>, TError,{data: BodyType<ActivateAccessInput>}, TContext> => {
+
+const mutationKey = ['activateAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activateAccess>>, {data: BodyType<ActivateAccessInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  activateAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActivateAccessMutationResult = NonNullable<Awaited<ReturnType<typeof activateAccess>>>
+    export type ActivateAccessMutationBody = BodyType<ActivateAccessInput>
+    export type ActivateAccessMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Activate app access with a free activation code
+ */
+export const useActivateAccess = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateAccess>>, TError,{data: BodyType<ActivateAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof activateAccess>>,
+        TError,
+        {data: BodyType<ActivateAccessInput>},
+        TContext
+      > => {
+      return useMutation(getActivateAccessMutationOptions(options));
+    }
 

@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accessActivationResult';
+export * from './activateAccessInput';
 export * from './adminStats';
 export * from './authResponse';
 export * from './careerPath';
 export * from './careerPathDemandLevel';
 export * from './careerRecommendation';
+export * from './certificate';
 export * from './changePasswordInput';
 export * from './chatMessage';
 export * from './chatMessageInput';
@@ -26,6 +29,10 @@ export * from './debugInput';
 export * from './debugSession';
 export * from './debugSessionStatus';
 export * from './errorResponse';
+export * from './feedback';
+export * from './feedbackInput';
+export * from './feedbackInputCategory';
+export * from './feedbackWithUser';
 export * from './getLecturesParams';
 export * from './getSubscriptionRequestsParams';
 export * from './healthStatus';
@@ -38,6 +45,9 @@ export * from './lectureInput';
 export * from './lectureUpdate';
 export * from './loginInput';
 export * from './profileUpdate';
+export * from './progressLevel';
+export * from './progressLevelBreakdown';
+export * from './progressLevelLevel';
 export * from './quiz';
 export * from './quizAttempt';
 export * from './quizFeedback';

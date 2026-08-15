@@ -14,4 +14,5 @@ export interface ProfileUpdate {
   specialization?: string;
   skillLevel?: string;
   knownLanguages?: string[];
+  avatarUrl?: string;
 }

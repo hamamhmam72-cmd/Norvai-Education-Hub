@@ -7,3 +7,5 @@ export * from "./quizzes";
 export * from "./subscriptions";
 export * from "./conversations";
 export * from "./messages";
+export * from "./certificates";
+export * from "./feedback";

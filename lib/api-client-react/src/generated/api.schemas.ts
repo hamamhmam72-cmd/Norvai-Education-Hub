@@ -56,6 +56,9 @@ export interface User {
   /** @nullable */
   skillLevel?: string | null;
   knownLanguages?: string[];
+  /** @nullable */
+  avatarUrl?: string | null;
+  accessActivated?: boolean;
   subscriptionActive?: boolean;
   /** @nullable */
   subscriptionExpiry?: string | null;
@@ -94,6 +97,7 @@ export interface ProfileUpdate {
   specialization?: string;
   skillLevel?: string;
   knownLanguages?: string[];
+  avatarUrl?: string;
 }
 
 export interface ChangePasswordInput {
@@ -471,6 +475,98 @@ export interface AdminStats {
   totalQuizzes: number;
   activeSubscriptions: number;
   pendingSubscriptions: number;
+}
+
+export type ProgressLevelLevel = typeof ProgressLevelLevel[keyof typeof ProgressLevelLevel];
+
+
+export const ProgressLevelLevel = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+  expert: 'expert',
+} as const;
+
+export type ProgressLevelBreakdown = {
+  completedLectures: number;
+  quizzesTaken: number;
+  avgQuizScore: number;
+  debugSessions: number;
+  chatSessions: number;
+};
+
+export interface Certificate {
+  id: number;
+  level: string;
+  certificateNumber: string;
+  studentName?: string;
+  issuedAt: string;
+}
+
+export interface ProgressLevel {
+  points: number;
+  level: ProgressLevelLevel;
+  /** @nullable */
+  nextLevel?: string | null;
+  /** @nullable */
+  nextLevelPoints?: number | null;
+  progressPercent: number;
+  completedLevels: string[];
+  breakdown: ProgressLevelBreakdown;
+  newCertificates: Certificate[];
+}
+
+export type FeedbackInputCategory = typeof FeedbackInputCategory[keyof typeof FeedbackInputCategory];
+
+
+export const FeedbackInputCategory = {
+  suggestion: 'suggestion',
+  bug: 'bug',
+  experience: 'experience',
+  other: 'other',
+} as const;
+
+export interface FeedbackInput {
+  category?: FeedbackInputCategory;
+  /**
+     * @minLength 3
+     * @maxLength 5000
+     */
+  message: string;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  rating?: number;
+}
+
+export interface Feedback {
+  id: number;
+  category: string;
+  message: string;
+  /** @nullable */
+  rating?: number | null;
+  createdAt: string;
+}
+
+export interface FeedbackWithUser {
+  id: number;
+  category: string;
+  message: string;
+  /** @nullable */
+  rating?: number | null;
+  createdAt: string;
+  username: string;
+  fullName: string;
+}
+
+export interface ActivateAccessInput {
+  code: string;
+}
+
+export interface AccessActivationResult {
+  activated: boolean;
+  accessActivated: boolean;
 }
 
 export type GetLecturesParams = {

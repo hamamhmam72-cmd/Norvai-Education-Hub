@@ -22,6 +22,8 @@ export const usersTable = pgTable("users", {
   specialization: text("specialization"),
   skillLevel: text("skill_level"), // "beginner" | "intermediate" | "advanced"
   knownLanguages: text("known_languages").array().notNull().default([]),
+  avatarUrl: text("avatar_url"),
+  accessActivated: boolean("access_activated").notNull().default(false),
   subscriptionActive: boolean("subscription_active").notNull().default(false),
   subscriptionExpiry: timestamp("subscription_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })

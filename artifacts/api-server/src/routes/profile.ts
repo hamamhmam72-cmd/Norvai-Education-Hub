@@ -20,6 +20,8 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     specialization: u.specialization,
     skillLevel: u.skillLevel,
     knownLanguages: u.knownLanguages,
+    avatarUrl: u.avatarUrl,
+    accessActivated: u.accessActivated,
     subscriptionActive: u.subscriptionActive,
     subscriptionExpiry: u.subscriptionExpiry?.toISOString() ?? null,
     createdAt: u.createdAt.toISOString(),
@@ -52,12 +54,14 @@ router.post("/profile/setup", requireAuth, async (req, res) => {
   res.json({ user: safeUser(user) });
 });
 
-// PUT /api/profile
-router.put("/profile", requireAuth, async (req, res) => {
-  const { fullName, university, major, yearOfStudy, specialization, skillLevel, knownLanguages } = req.body;
+// PATCH /api/profile
+router.patch("/profile", requireAuth, async (req, res) => {
+  const { fullName, university, major, yearOfStudy, specialization, skillLevel, knownLanguages, avatarUrl } = req.body;
+  const updates: Record<string, unknown> = { fullName, university, major, yearOfStudy, specialization, skillLevel, knownLanguages };
+  if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
   const [user] = await db
     .update(usersTable)
-    .set({ fullName, university, major, yearOfStudy, specialization, skillLevel, knownLanguages })
+    .set(updates)
     .where(eq(usersTable.id, req.user!.userId))
     .returning();
   res.json({ user: safeUser(user) });

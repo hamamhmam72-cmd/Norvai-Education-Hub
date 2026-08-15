@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LevelBanner } from "@/components/LevelBanner";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -37,7 +38,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
+
+      {/* Current Level Banner */}
+      <LevelBanner />
+
       {/* Welcome Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-sidebar p-8 text-sidebar-foreground shadow-sm">
         <div className="relative z-10 grid gap-6 md:grid-cols-2 md:items-center">

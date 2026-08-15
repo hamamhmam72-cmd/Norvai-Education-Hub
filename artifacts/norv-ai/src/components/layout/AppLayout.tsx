@@ -27,6 +27,7 @@ import {
   Compass,
   UserCircle,
   CreditCard,
+  MessageSquareHeart,
   LogOut,
   Shield,
   Loader2,
@@ -41,7 +42,7 @@ import { Button } from "@/components/ui/button";
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { lang, toggleLang, t } = useLang();
+  const { lang, toggleLang, t, isRTL } = useLang();
   const [location] = useLocation();
   const logoutMutation = useLogout();
 
@@ -58,6 +59,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const secondaryNavItems = [
     { titleKey: "profile" as const, url: "/profile", icon: UserCircle },
     { titleKey: "subscription" as const, url: "/subscription", icon: CreditCard },
+    { titleKey: "feedback" as const, url: "/feedback", icon: MessageSquareHeart },
   ];
 
   const handleLogout = () => {
@@ -86,7 +88,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return (
       <main className="min-h-screen bg-background">
         {/* Theme/Lang toggles on public pages */}
-        <div className="absolute top-4 right-4 flex gap-2 z-50">
+        <div className="absolute top-4 end-4 flex gap-2 z-50">
           <Button
             variant="ghost"
             size="icon"
@@ -113,7 +115,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" className="border-r border-sidebar-border/50">
+      <Sidebar variant="inset" side={isRTL ? "right" : "left"} className="border-e border-sidebar-border/50">
         <SidebarHeader className="flex h-16 items-center justify-center border-b border-sidebar-border px-6">
           <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
             <div className="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-primary-foreground">
@@ -210,7 +212,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <SidebarInset className="flex flex-col flex-1 min-w-0 bg-background">
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger className="-ms-1" />
           <div className="flex items-center gap-2">
             {/* Language toggle */}
             <Button

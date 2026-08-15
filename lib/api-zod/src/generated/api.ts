@@ -46,6 +46,8 @@ export const RegisterResponse = zod.object({
   "specialization": zod.string().nullish(),
   "skillLevel": zod.string().nullish(),
   "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().nullish(),
+  "accessActivated": zod.boolean().optional(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -75,6 +77,8 @@ export const LoginResponse = zod.object({
   "specialization": zod.string().nullish(),
   "skillLevel": zod.string().nullish(),
   "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().nullish(),
+  "accessActivated": zod.boolean().optional(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -105,6 +109,8 @@ export const GetMeResponse = zod.object({
   "specialization": zod.string().nullish(),
   "skillLevel": zod.string().nullish(),
   "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().nullish(),
+  "accessActivated": zod.boolean().optional(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -136,6 +142,8 @@ export const CompleteSetupResponse = zod.object({
   "specialization": zod.string().nullish(),
   "skillLevel": zod.string().nullish(),
   "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().nullish(),
+  "accessActivated": zod.boolean().optional(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -152,7 +160,8 @@ export const UpdateProfileBody = zod.object({
   "yearOfStudy": zod.number().optional(),
   "specialization": zod.string().optional(),
   "skillLevel": zod.string().optional(),
-  "knownLanguages": zod.array(zod.string()).optional()
+  "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().optional()
 })
 
 export const UpdateProfileResponse = zod.object({
@@ -167,6 +176,8 @@ export const UpdateProfileResponse = zod.object({
   "specialization": zod.string().nullish(),
   "skillLevel": zod.string().nullish(),
   "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().nullish(),
+  "accessActivated": zod.boolean().optional(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1003,6 +1014,8 @@ export const GetAdminUsersResponseItem = zod.object({
   "specialization": zod.string().nullish(),
   "skillLevel": zod.string().nullish(),
   "knownLanguages": zod.array(zod.string()).optional(),
+  "avatarUrl": zod.string().nullish(),
+  "accessActivated": zod.boolean().optional(),
   "subscriptionActive": zod.boolean().optional(),
   "subscriptionExpiry": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1019,6 +1032,99 @@ export const GetAdminStatsResponse = zod.object({
   "totalQuizzes": zod.number(),
   "activeSubscriptions": zod.number(),
   "pendingSubscriptions": zod.number()
+})
+
+
+/**
+ * @summary Get current learning level and progress (auto-awards certificates)
+ */
+export const GetProgressLevelResponse = zod.object({
+  "points": zod.number(),
+  "level": zod.enum(['beginner', 'intermediate', 'advanced', 'expert']),
+  "nextLevel": zod.string().nullish(),
+  "nextLevelPoints": zod.number().nullish(),
+  "progressPercent": zod.number(),
+  "completedLevels": zod.array(zod.string()),
+  "breakdown": zod.object({
+  "completedLectures": zod.number(),
+  "quizzesTaken": zod.number(),
+  "avgQuizScore": zod.number(),
+  "debugSessions": zod.number(),
+  "chatSessions": zod.number()
+}),
+  "newCertificates": zod.array(zod.object({
+  "id": zod.number(),
+  "level": zod.string(),
+  "certificateNumber": zod.string(),
+  "studentName": zod.string().optional(),
+  "issuedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary List earned certificates
+ */
+export const GetCertificatesResponseItem = zod.object({
+  "id": zod.number(),
+  "level": zod.string(),
+  "certificateNumber": zod.string(),
+  "studentName": zod.string().optional(),
+  "issuedAt": zod.string()
+})
+export const GetCertificatesResponse = zod.array(GetCertificatesResponseItem)
+
+
+/**
+ * @summary Submit feedback or a suggestion
+ */
+export const submitFeedbackBodyMessageMin = 3;
+export const submitFeedbackBodyMessageMax = 5000;
+
+export const submitFeedbackBodyRatingMax = 5;
+
+
+
+export const SubmitFeedbackBody = zod.object({
+  "category": zod.enum(['suggestion', 'bug', 'experience', 'other']).optional(),
+  "message": zod.string().min(submitFeedbackBodyMessageMin).max(submitFeedbackBodyMessageMax),
+  "rating": zod.number().min(1).max(submitFeedbackBodyRatingMax).optional()
+})
+
+export const SubmitFeedbackResponse = zod.object({
+  "id": zod.number(),
+  "category": zod.string(),
+  "message": zod.string(),
+  "rating": zod.number().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List all feedback (admin only)
+ */
+export const GetFeedbackResponseItem = zod.object({
+  "id": zod.number(),
+  "category": zod.string(),
+  "message": zod.string(),
+  "rating": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "username": zod.string(),
+  "fullName": zod.string()
+})
+export const GetFeedbackResponse = zod.array(GetFeedbackResponseItem)
+
+
+/**
+ * @summary Activate app access with a free activation code
+ */
+export const ActivateAccessBody = zod.object({
+  "code": zod.string()
+})
+
+export const ActivateAccessResponse = zod.object({
+  "activated": zod.boolean(),
+  "accessActivated": zod.boolean()
 })
 
 

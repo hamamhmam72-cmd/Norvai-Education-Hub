@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { CertificatesSection } from "@/components/CertificatesSection";
 
 const SPECIALIZATIONS = [
   "Programming & Development",
@@ -118,6 +119,7 @@ export default function Profile() {
         skillLevel: (user as any).skillLevel ?? "beginner",
       });
       setKnownLanguages(Array.isArray((user as any).knownLanguages) ? (user as any).knownLanguages : []);
+      if ((user as any).avatarUrl) setAvatarPreview((user as any).avatarUrl);
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -135,7 +137,21 @@ export default function Profile() {
         body: formData,
       });
       const data = await res.json();
-      if (data.url) setAvatarPreview(data.url);
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload failed");
+      setAvatarPreview(data.url);
+      // Persist avatar immediately
+      updateProfile.mutate(
+        { data: { avatarUrl: data.url } as any },
+        {
+          onSuccess: (updatedUser) => {
+            updateUser((updatedUser as any).user ?? updatedUser);
+            toast({ description: t("avatarUpdated") });
+          },
+          onError: (err: any) => {
+            toast({ variant: "destructive", description: err?.message ?? "Failed to save avatar." });
+          },
+        }
+      );
     } catch {
       toast({ variant: "destructive", description: "Failed to upload image." });
     } finally {
@@ -217,12 +233,10 @@ export default function Profile() {
                         </FormItem>
                       )}
                     />
-                    <FormItem>
-                      <FormLabel>{t("username")}</FormLabel>
-                      <FormControl>
-                        <Input value={user?.username ?? ""} disabled className="bg-muted" />
-                      </FormControl>
-                    </FormItem>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium leading-none">{t("username")}</label>
+                      <Input value={user?.username ?? ""} disabled className="bg-muted" />
+                    </div>
                   </div>
 
                   <Separator />
@@ -318,7 +332,7 @@ export default function Profile() {
                   </div>
 
                   <div className="space-y-3 pt-2">
-                    <FormLabel>{t("knownLanguages")}</FormLabel>
+                    <label className="text-sm font-medium leading-none">{t("knownLanguages")}</label>
                     <div className="flex flex-wrap gap-2">
                       {LANGUAGES.map((lang) => {
                         const isSelected = knownLanguages.includes(lang);
@@ -444,8 +458,9 @@ export default function Profile() {
                 <button
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 size-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
-                  title="Upload profile picture"
+                  className="absolute -bottom-1 -end-1 size-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
+                  title={t("profilePicture")}
+                  data-testid="button-upload-avatar"
                 >
                   {avatarUploading ? <Loader2 className="size-3 animate-spin" /> : <Camera className="size-3" />}
                 </button>
@@ -484,6 +499,8 @@ export default function Profile() {
               </div>
             </div>
           </Card>
+
+          <CertificatesSection />
 
           <Card className="border-border/50 shadow-sm bg-primary/5 border-primary/20">
             <CardContent className="p-6">

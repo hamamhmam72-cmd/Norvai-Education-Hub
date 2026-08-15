@@ -23,7 +23,9 @@ import QuizGenerator from '@/pages/quiz';
 import CareerAdvisor from '@/pages/career';
 import Profile from '@/pages/profile';
 import Subscription from '@/pages/subscription';
+import FeedbackPage from '@/pages/feedback';
 import AdminPanel from '@/pages/admin';
+import { AccessGate } from '@/components/AccessGate';
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,7 @@ function Router() {
   return (
     <AppLayout>
       <RoutedErrorBoundary>
+        <AccessGate>
         <Switch>
           <Route path="/" component={() => null} />
           <Route path="/login" component={Login} />
@@ -45,9 +48,11 @@ function Router() {
           <Route path="/career" component={CareerAdvisor} />
           <Route path="/profile" component={Profile} />
           <Route path="/subscription" component={Subscription} />
+          <Route path="/feedback" component={FeedbackPage} />
           <Route path="/admin" component={AdminPanel} />
           <Route component={NotFound} />
         </Switch>
+        </AccessGate>
       </RoutedErrorBoundary>
     </AppLayout>
   );

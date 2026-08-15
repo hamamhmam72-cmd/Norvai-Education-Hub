@@ -21,6 +21,9 @@ tags:
   - name: career
   - name: subscriptions
   - name: admin
+  - name: progress
+  - name: feedback
+  - name: access
 
 paths:
   /healthz:
@@ -933,6 +936,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminStats"
 
+  # ── Progress & Certificates ──────────────────────────────────────────────
+  /progress/level:
+    get:
+      operationId: getProgressLevel
+      tags: [progress]
+      summary: Get current learning level and progress (auto-awards certificates)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressLevel"
+
+  /certificates:
+    get:
+      operationId: getCertificates
+      tags: [progress]
+      summary: List earned certificates
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Certificate"
+
+  # ── Feedback ──────────────────────────────────────────────────────────────
+  /feedback:
+    post:
+      operationId: submitFeedback
+      tags: [feedback]
+      summary: Submit feedback or a suggestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+    get:
+      operationId: getFeedback
+      tags: [feedback]
+      summary: List all feedback (admin only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeedbackWithUser"
+
+  # ── Access Activation ─────────────────────────────────────────────────────
+  /access/activate:
+    post:
+      operationId: activateAccess
+      tags: [access]
+      summary: Activate app access with a free activation code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateAccessInput"
+      responses:
+        "200":
+          description: Activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessActivationResult"
+        "400":
+          description: Invalid code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 # ── Schemas ───────────────────────────────────────────────────────────────────
 components:
   schemas:
@@ -1019,6 +1110,10 @@ components:
           type: array
           items:
             type: string
+        avatarUrl:
+          type: ["string", "null"]
+        accessActivated:
+          type: boolean
         subscriptionActive:
           type: boolean
         subscriptionExpiry:
@@ -1070,6 +1165,8 @@ components:
           type: array
           items:
             type: string
+        avatarUrl:
+          type: string
 
     ChangePasswordInput:
       type: object
@@ -1631,3 +1728,125 @@ components:
           type: number
         pendingSubscriptions:
           type: number
+
+    # Progress & Certificates
+    ProgressLevel:
+      type: object
+      required: [points, level, progressPercent, completedLevels, breakdown, newCertificates]
+      properties:
+        points:
+          type: number
+        level:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        nextLevel:
+          type: ["string", "null"]
+        nextLevelPoints:
+          type: ["number", "null"]
+        progressPercent:
+          type: number
+        completedLevels:
+          type: array
+          items:
+            type: string
+        breakdown:
+          type: object
+          required: [completedLectures, quizzesTaken, avgQuizScore, debugSessions, chatSessions]
+          properties:
+            completedLectures:
+              type: number
+            quizzesTaken:
+              type: number
+            avgQuizScore:
+              type: number
+            debugSessions:
+              type: number
+            chatSessions:
+              type: number
+        newCertificates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Certificate"
+
+    Certificate:
+      type: object
+      required: [id, level, certificateNumber, issuedAt]
+      properties:
+        id:
+          type: number
+        level:
+          type: string
+        certificateNumber:
+          type: string
+        studentName:
+          type: string
+        issuedAt:
+          type: string
+
+    # Feedback
+    FeedbackInput:
+      type: object
+      required: [message]
+      properties:
+        category:
+          type: string
+          enum: [suggestion, bug, experience, other]
+        message:
+          type: string
+          minLength: 3
+          maxLength: 5000
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+
+    Feedback:
+      type: object
+      required: [id, category, message, createdAt]
+      properties:
+        id:
+          type: number
+        category:
+          type: string
+        message:
+          type: string
+        rating:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    FeedbackWithUser:
+      type: object
+      required: [id, category, message, createdAt, username, fullName]
+      properties:
+        id:
+          type: number
+        category:
+          type: string
+        message:
+          type: string
+        rating:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+        username:
+          type: string
+        fullName:
+          type: string
+
+    # Access Activation
+    ActivateAccessInput:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+
+    AccessActivationResult:
+      type: object
+      required: [activated, accessActivated]
+      properties:
+        activated:
+          type: boolean
+        accessActivated:
+          type: boolean

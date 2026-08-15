@@ -13,8 +13,22 @@ import careerRouter from "./career.js";
 import subscriptionsRouter from "./subscriptions.js";
 import adminRouter from "./admin.js";
 import uploadRouter from "./upload.js";
+import progressRouter from "./progress.js";
+import certificatesRouter from "./certificates.js";
+import feedbackRouter from "./feedback.js";
+import accessRouter from "./access.js";
+
+import { requireActiveAccess } from "../middleware/auth.js";
 
 const router: IRouter = Router();
+
+// Server-side paywall: core learning features require an active subscription
+// or a validated activation code. Profile, subscription, feedback, access,
+// auth, upload (needed for receipts), certificates, and admin stay open.
+router.use(
+  ["/dashboard", "/lectures", "/curricula", "/chat", "/summary", "/debug", "/quizzes", "/career", "/progress"],
+  requireActiveAccess
+);
 
 router.use(healthRouter);
 router.use(authRouter);
@@ -30,5 +44,9 @@ router.use(careerRouter);
 router.use(subscriptionsRouter);
 router.use(adminRouter);
 router.use(uploadRouter);
+router.use(progressRouter);
+router.use(certificatesRouter);
+router.use(feedbackRouter);
+router.use(accessRouter);
 
 export default router;
