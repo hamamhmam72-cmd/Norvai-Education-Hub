@@ -121,7 +121,7 @@ export default function Setup() {
       <div className="w-full max-w-2xl">
         <div className="mb-8 flex items-center justify-center gap-2">
           <BrainCircuit className="size-8 text-primary" />
-          <h1 className="text-2xl font-bold">Norv_ai Setup</h1>
+          <h1 className="text-2xl font-bold">Norv Setup</h1>
         </div>
 
         <Card className="shadow-lg shadow-black/5 overflow-hidden">
@@ -138,7 +138,7 @@ export default function Setup() {
                 </div>
                 <h2 className="text-3xl font-bold tracking-tight">Welcome to your AI Copilot</h2>
                 <p className="text-muted-foreground text-lg">
-                  Let's personalize Norv_ai to your studies. We just need a few details to tailor your curriculum, quizzes, and career advice.
+                  Let's personalize Norv to your studies. We just need a few details to tailor your curriculum, quizzes, and career advice.
                 </p>
                 <div className="pt-6">
                   <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-base group" onClick={nextStep}>

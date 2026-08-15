@@ -166,7 +166,7 @@ export function AccessGate({ children }: { children: ReactNode }) {
           {/* Trust note */}
           <p className="text-[11px] text-muted-foreground/60 text-center flex items-center justify-center gap-1.5">
             <ShieldCheck className="size-3" />
-            Norv_ai · Secure activation
+            Norv · Secure activation
           </p>
         </div>
       </div>

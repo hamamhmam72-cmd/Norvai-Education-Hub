@@ -39,7 +39,7 @@ function downloadCertificate(cert: Certificate) {
   // Brand
   ctx.fillStyle = accent;
   ctx.font = "bold 40px Georgia, serif";
-  ctx.fillText("Norv_ai", 600, 150);
+  ctx.fillText("Norv", 600, 150);
 
   ctx.fillStyle = "#e2e8f0";
   ctx.font = "bold 56px Georgia, serif";
@@ -72,7 +72,7 @@ function downloadCertificate(cert: Certificate) {
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "24px Georgia, serif";
-  ctx.fillText("of the Norv_ai learning program", 600, 640);
+  ctx.fillText("of the Norv learning program", 600, 640);
 
   const issued = new Date(cert.issuedAt).toLocaleDateString("en-US", {
     year: "numeric", month: "long", day: "numeric",
@@ -98,14 +98,14 @@ function CertificatePreview({ cert }: { cert: Certificate }) {
       className="aspect-[12/8.5] w-full rounded-lg p-6 sm:p-10 flex flex-col items-center justify-center text-center"
       style={{ background: "#0b1220", border: `4px solid ${accent}` }}
     >
-      <p className="font-serif font-bold text-lg" style={{ color: accent }}>Norv_ai</p>
+      <p className="font-serif font-bold text-lg" style={{ color: accent }}>Norv</p>
       <p className="font-serif font-bold text-xl sm:text-3xl text-slate-100 mt-2">Certificate of Completion</p>
       <p className="text-slate-400 text-xs sm:text-sm mt-4">This certificate is proudly awarded to</p>
       <p className="font-serif font-bold text-2xl sm:text-4xl text-white mt-2">{cert.studentName ?? "Student"}</p>
       <div className="w-40 h-px my-3" style={{ background: accent }} />
       <p className="text-slate-400 text-xs sm:text-sm">for successfully completing the</p>
       <p className="font-serif font-bold text-lg sm:text-2xl mt-1" style={{ color: accent }}>{levelName} Level</p>
-      <p className="text-slate-400 text-xs sm:text-sm mt-1">of the Norv_ai learning program</p>
+      <p className="text-slate-400 text-xs sm:text-sm mt-1">of the Norv learning program</p>
       <p className="text-slate-500 text-[10px] sm:text-xs mt-4">Issued on {issued} · {cert.certificateNumber}</p>
     </div>
   );

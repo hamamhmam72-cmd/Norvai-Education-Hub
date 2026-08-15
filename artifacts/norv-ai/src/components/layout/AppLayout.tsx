@@ -121,7 +121,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-primary-foreground">
               <BrainCircuit className="size-5" />
             </div>
-            <span className="text-sidebar-foreground">Norv_ai</span>
+            <span className="text-sidebar-foreground">Norv</span>
           </div>
         </SidebarHeader>
 

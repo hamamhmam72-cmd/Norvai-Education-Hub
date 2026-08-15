@@ -509,7 +509,7 @@ export default function Profile() {
                 <div>
                   <h3 className="font-bold text-primary mb-1">AI Learns With You</h3>
                   <p className="text-sm text-foreground/80 leading-relaxed">
-                    Keeping your profile updated helps Norv_ai generate better quizzes, tailored explanations, and accurate career advice.
+                    Keeping your profile updated helps Norv generate better quizzes, tailored explanations, and accurate career advice.
                   </p>
                 </div>
               </div>

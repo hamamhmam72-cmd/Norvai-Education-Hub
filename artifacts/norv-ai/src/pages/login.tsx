@@ -73,7 +73,7 @@ export default function Login() {
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <BrainCircuit className="size-6" />
           </div>
-          <span>Norv_ai</span>
+          <span>Norv</span>
         </div>
         
         <div className="max-w-md">
@@ -96,7 +96,7 @@ export default function Login() {
         </div>
         
         <p className="text-sm text-sidebar-foreground/50">
-          © {new Date().getFullYear()} Norv_ai. All rights reserved.
+          © {new Date().getFullYear()} Norv. All rights reserved.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export default function Login() {
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <BrainCircuit className="size-6" />
             </div>
-            <span>Norv_ai</span>
+            <span>Norv</span>
           </div>
 
           <Card className="border-border/50 shadow-lg shadow-black/5">
