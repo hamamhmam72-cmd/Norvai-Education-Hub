@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 const PLANS = [
   { id: "3months", name: "3 Months", price: "10 JOD", desc: "Perfect for a single semester.", popular: false },
   { id: "6months", name: "6 Months", price: "19 JOD", desc: "Covers a full academic year.", popular: true },
-  { id: "1year", name: "1 Year", price: "35 JOD", desc: "Best value for dedicated students.", popular: false },
+  { id: "1year", name: "1 Year", price: "55 JOD", desc: "Best value for dedicated students.", popular: false },
 ] as const;
 
 export default function Subscription() {
