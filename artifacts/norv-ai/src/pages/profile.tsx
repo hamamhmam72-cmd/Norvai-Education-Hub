@@ -119,7 +119,7 @@ export default function Profile() {
       { data: { ...data, knownLanguages } },
       {
         onSuccess: (updatedUser) => {
-          updateUser(updatedUser);
+          updateUser((updatedUser as any).user ?? updatedUser);
           toast({ title: "Profile updated", description: "Your changes have been saved." });
         },
         onError: (err: any) => {

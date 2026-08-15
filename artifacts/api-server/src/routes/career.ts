@@ -7,8 +7,8 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
-// GET /api/career
-router.get("/career", requireAuth, async (req, res) => {
+// GET /api/career/recommendations
+router.get("/career/recommendations", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
 
   const [user] = await db

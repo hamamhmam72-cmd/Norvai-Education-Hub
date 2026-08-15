@@ -75,8 +75,8 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
   });
 });
 
-// GET /api/admin/subscriptions (admin)
-router.get("/admin/subscriptions", requireAdmin, async (req, res) => {
+// GET /api/subscriptions (admin)
+router.get("/subscriptions", requireAdmin, async (req, res) => {
   const { status } = req.query as { status?: string };
   const requests = await db.select().from(subscriptionRequestsTable);
   const filtered = status
@@ -96,9 +96,9 @@ router.get("/admin/subscriptions", requireAdmin, async (req, res) => {
   );
 });
 
-// POST /api/admin/subscriptions/:id/approve (admin)
+// POST /api/subscriptions/:id/approve (admin)
 router.post(
-  "/admin/subscriptions/:id/approve",
+  "/subscriptions/:id/approve",
   requireAdmin,
   async (req, res) => {
     const id = Number(req.params.id);
@@ -130,9 +130,9 @@ router.post(
   }
 );
 
-// POST /api/admin/subscriptions/:id/reject (admin)
+// POST /api/subscriptions/:id/reject (admin)
 router.post(
-  "/admin/subscriptions/:id/reject",
+  "/subscriptions/:id/reject",
   requireAdmin,
   async (req, res) => {
     const id = Number(req.params.id);

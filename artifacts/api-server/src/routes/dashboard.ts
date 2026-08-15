@@ -42,8 +42,8 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
   });
 });
 
-// GET /api/dashboard/recent-activity
-router.get("/dashboard/recent-activity", requireAuth, async (req, res) => {
+// GET /api/dashboard/recent
+router.get("/dashboard/recent", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
 
   const [recentCompleted, recentDebug, recentAttempts] = await Promise.all([

@@ -8,7 +8,7 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 
 // POST /api/quiz/generate
-router.post("/quiz/generate", requireAuth, async (req, res) => {
+router.post("/quizzes/generate", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
   const { material, topic, quizType, questionCount } = req.body;
   const count = Math.min(Math.max(Number(questionCount) || 5, 3), 15);
@@ -74,7 +74,7 @@ Respond with valid JSON only.`;
 });
 
 // GET /api/quiz
-router.get("/quiz", requireAuth, async (req, res) => {
+router.get("/quizzes", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
   const quizzes = await db
     .select()
@@ -92,7 +92,7 @@ router.get("/quiz", requireAuth, async (req, res) => {
 });
 
 // GET /api/quiz/:id
-router.get("/quiz/:id", requireAuth, async (req, res) => {
+router.get("/quizzes/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const [quiz] = await db
     .select()
@@ -114,7 +114,7 @@ router.get("/quiz/:id", requireAuth, async (req, res) => {
 });
 
 // POST /api/quiz/:id/submit
-router.post("/quiz/:id/submit", requireAuth, async (req, res) => {
+router.post("/quizzes/:id/submit", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const uid = req.user!.userId;
   const { answers } = req.body;
@@ -175,7 +175,7 @@ router.post("/quiz/:id/submit", requireAuth, async (req, res) => {
 });
 
 // GET /api/quiz/:id/attempts
-router.get("/quiz/:id/attempts", requireAuth, async (req, res) => {
+router.get("/quizzes/:id/attempts", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const uid = req.user!.userId;
   const attempts = await db
