@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3UQHLUGTwMWVtetCrSIXP"
+uri = "file://exports/norv-tech-stack.html"
+type = "text"
+title = "Norv — Full Tech Stack Documentation"
+description = "وثيقة شاملة بجميع التقنيات واللغات البرمجية المستخدمة في منصة Norv"

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Norv — Tech Stack & Languages</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+  :root {
+    --primary: #7c3aed;
+    --primary-light: #a78bfa;
+    --primary-dark: #5b21b6;
+    --bg: #0f0a1e;
+    --surface: #1a1030;
+    --surface2: #231540;
+    --border: rgba(124,58,237,0.25);
+    --text: #e8e0f7;
+    --text-muted: #9385b5;
+    --green: #34d399;
+    --blue: #60a5fa;
+    --orange: #fb923c;
+    --pink: #f472b6;
+    --yellow: #fbbf24;
+    --cyan: #22d3ee;
+    --red: #f87171;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #1a0a3a 0%, #0f051e 60%, #0a1628 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(124,58,237,0.35), transparent);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 999px;
+    padding: 6px 18px;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--primary-light);
+    margin-bottom: 20px;
+  }
+  .hero-badge::before { content: '●'; font-size: 8px; color: var(--green); }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 30%, var(--primary-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+  .hero p {
+    color: var(--text-muted); font-size: 15px; max-width: 560px; margin: 0 auto;
+  }
+  .hero-meta {
+    display: flex; justify-content: center; gap: 32px;
+    margin-top: 32px; flex-wrap: wrap;
+  }
+  .hero-stat {
+    text-align: center;
+  }
+  .hero-stat .num {
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-light), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-stat .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* ── Layout ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  /* ── Section headings ── */
+  .section { margin-bottom: 48px; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .section h2 { font-size: 20px; font-weight: 700; }
+  .section-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── Cards grid ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; right: 0; left: 0; height: 2px;
+    background: var(--accent, var(--primary));
+    opacity: 0.7;
+  }
+  .card:hover { border-color: var(--primary-light); transform: translateY(-2px); }
+
+  .card-icon { font-size: 22px; margin-bottom: 8px; }
+  .card-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .card-role { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .card-version {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'Fira Code', monospace;
+    font-size: 10px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--primary-light);
+  }
+
+  /* ── Language pills row ── */
+  .langs { display: flex; flex-wrap: wrap; gap: 10px; }
+  .lang-pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600;
+    transition: border-color 0.2s;
+  }
+  .lang-pill:hover { border-color: var(--primary-light); }
+  .lang-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Flow diagram (simple horizontal steps) ── */
+  .flow { display: flex; flex-wrap: wrap; gap: 0; align-items: center; }
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px; font-weight: 600;
+    text-align: center;
+    min-width: 110px;
+  }
+  .flow-step .sub { font-size: 10px; color: var(--text-muted); font-weight: 400; margin-top: 2px; }
+  .flow-arrow {
+    color: var(--text-muted); font-size: 18px;
+    padding: 0 6px;
+  }
+
+  /* ── Big table for features ── */
+  .feat-table { width: 100%; border-collapse: collapse; }
+  .feat-table th, .feat-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    text-align: right;
+  }
+  .feat-table th {
+    color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--surface2);
+  }
+  .feat-table tr:last-child td { border-bottom: none; }
+  .feat-table td:first-child { font-weight: 600; color: var(--primary-light); }
+  .tag {
+    display: inline-block;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-family: 'Fira Code', monospace;
+    color: var(--primary-light);
+    margin: 1px;
+  }
+  .tag.green { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: var(--green); }
+  .tag.blue { background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3); color: var(--blue); }
+  .tag.orange { background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.3); color: var(--orange); }
+  .tag.pink { background: rgba(244,114,182,0.1); border-color: rgba(244,114,182,0.3); color: var(--pink); }
+  .tag.yellow { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: var(--yellow); }
+  .tag.cyan { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.3); color: var(--cyan); }
+  .tag.red { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--red); }
+
+  /* ── DB schema mini ── */
+  .schema-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px; }
+  .schema-table {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .schema-table-head {
+    background: rgba(124,58,237,0.2); padding: 8px 12px;
+    font-size: 12px; font-weight: 700; font-family: 'Fira Code', monospace;
+    color: var(--primary-light);
+    border-bottom: 1px solid var(--border);
+  }
+  .schema-table-body { padding: 8px 12px; }
+  .schema-col { font-size: 11px; color: var(--text-muted); padding: 2px 0; font-family: 'Fira Code', monospace; }
+  .schema-col span { color: var(--cyan); }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  footer strong { color: var(--primary-light); }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    .card, .schema-table, .flow-step, .lang-pill, .feat-table th { background: #f9f9f9 !important; }
+    .card::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">وثيقة المشروع — Norv Platform</div>
+  <h1>⚡ Norv — Full Tech Stack</h1>
+  <p>جميع التقنيات واللغات البرمجية المستخدمة في بناء منصة Norv التعليمية الذكية من البداية حتى الآن</p>
+  <div class="hero-meta">
+    <div class="hero-stat"><div class="num">5</div><div class="label">لغات برمجية</div></div>
+    <div class="hero-stat"><div class="num">60+</div><div class="label">مكتبة وحزمة</div></div>
+    <div class="hero-stat"><div class="num">3</div><div class="num" style="font-size:14px;margin-top:2px">طبقات رئيسية</div><div class="label">Frontend · Backend · DB</div></div>
+    <div class="hero-stat"><div class="num">7</div><div class="label">ميزة رئيسية</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 1. Languages -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(124,58,237,0.15)">🌐</div>
+      <div>
+        <h2>لغات البرمجة المستخدمة</h2>
+        <div class="section-sub">Languages powering every layer of Norv</div>
+      </div>
+    </div>
+    <div class="langs">
+      <div class="lang-pill"><div class="lang-dot" style="background:#3178c6"></div>TypeScript — اللغة الأساسية للمشروع كاملاً</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#f7df1e"></div>JavaScript — وقت التشغيل (Node.js / esbuild output)</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#61dafb"></div>JSX / TSX — مكونات React (واجهة المستخدم)</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#38bdf8"></div>CSS / Tailwind — تنسيق الواجهة والـ RTL</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#336791"></div>SQL (PostgreSQL) — استعلامات قاعدة البيانات</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#e34f26"></div>HTML5 — هيكل الصفحات</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#f05032"></div>YAML — مواصفات OpenAPI</div>
+      <div class="lang-pill"><div class="lang-dot" style="background:#89e051"></div>Shell / Bash — سكريبتات البناء والنشر</div>
+    </div>
+  </div>
+
+  <!-- 2. Frontend -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(96,165,250,0.15)">🎨</div>
+      <div>
+        <h2>Frontend — واجهة المستخدم</h2>
+        <div class="section-sub">React + Vite SPA — artifact: norv-ai</div>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">⚛️</div>
+        <div class="card-name">React 19</div>
+        <div class="card-role">مكتبة بناء واجهة المستخدم — Hooks, Context, Suspense</div>
+        <div class="card-version">^19.x</div>
+      </div>
+      <div class="card" style="--accent:var(--yellow)">
+        <div class="card-icon">⚡</div>
+        <div class="card-name">Vite</div>
+        <div class="card-role">بيئة التطوير والبناء السريع — HMR، تجميع الأصول</div>
+        <div class="card-version">^6.x</div>
+      </div>
+      <div class="card" style="--accent:var(--cyan)">
+        <div class="card-icon">🛤️</div>
+        <div class="card-name">Wouter</div>
+        <div class="card-role">التوجيه (Routing) داخل التطبيق — lightweight بديل React Router</div>
+        <div class="card-version">^3.3.5</div>
+      </div>
+      <div class="card" style="--accent:var(--orange)">
+        <div class="card-icon">🔄</div>
+        <div class="card-name">TanStack Query</div>
+        <div class="card-role">إدارة حالة الخادم — caching، refetching، mutations</div>
+        <div class="card-version">^5.x</div>
+      </div>
+      <div class="card" style="--accent:#8b5cf6">
+        <div class="card-icon">🧩</div>
+        <div class="card-name">shadcn/ui</div>
+        <div class="card-role">نظام مكونات واجهة المستخدم المبني على Radix UI</div>
+        <div class="card-version">latest</div>
+      </div>
+      <div class="card" style="--accent:#06b6d4">
+        <div class="card-icon">🎨</div>
+        <div class="card-name">Tailwind CSS v4</div>
+        <div class="card-role">إطار تنسيق utility-first — RTL، dark mode، responsive</div>
+        <div class="card-version">^4.x</div>
+      </div>
+      <div class="card" style="--accent:var(--pink)">
+        <div class="card-icon">🔮</div>
+        <div class="card-name">Framer Motion</div>
+        <div class="card-role">مكتبة الأنيميشن — page transitions، fade-in، slide</div>
+        <div class="card-version">^12.x</div>
+      </div>
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">📝</div>
+        <div class="card-name">React Hook Form</div>
+        <div class="card-role">إدارة نماذج الإدخال مع validation وperformance عالية</div>
+        <div class="card-version">^7.55</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">✅</div>
+        <div class="card-name">Zod</div>
+        <div class="card-role">التحقق من صحة البيانات بشكل type-safe — schemas</div>
+        <div class="card-version">^3.x</div>
+      </div>
+      <div class="card" style="--accent:var(--yellow)">
+        <div class="card-icon">📊</div>
+        <div class="card-name">Recharts</div>
+        <div class="card-role">مكتبة الرسوم البيانية — dashboard analytics charts</div>
+        <div class="card-version">^2.15</div>
+      </div>
+      <div class="card" style="--accent:var(--orange)">
+        <div class="card-icon">🔔</div>
+        <div class="card-name">Sonner</div>
+        <div class="card-role">إشعارات Toast الجميلة والسريعة</div>
+        <div class="card-version">^2.0</div>
+      </div>
+      <div class="card" style="--accent:var(--cyan)">
+        <div class="card-icon">🎯</div>
+        <div class="card-name">Lucide React</div>
+        <div class="card-role">مكتبة أيقونات SVG — 1500+ أيقونة</div>
+        <div class="card-version">latest</div>
+      </div>
+      <div class="card" style="--accent:var(--pink)">
+        <div class="card-icon">📐</div>
+        <div class="card-name">Radix UI</div>
+        <div class="card-role">مكونات Headless — Dialog، Dropdown، Tooltip… (30+ مكوّن)</div>
+        <div class="card-version">various</div>
+      </div>
+      <div class="card" style="--accent:var(--primary-light)">
+        <div class="card-icon">🌙</div>
+        <div class="card-name">next-themes</div>
+        <div class="card-role">دعم الوضع المظلم / الفاتح — Dark / Light mode</div>
+        <div class="card-version">^0.4</div>
+      </div>
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">📅</div>
+        <div class="card-name">date-fns</div>
+        <div class="card-role">معالجة التواريخ والأوقات (countdown timer)</div>
+        <div class="card-version">^3.6</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Backend -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(52,211,153,0.15)">⚙️</div>
+      <div>
+        <h2>Backend — خادم API</h2>
+        <div class="section-sub">Express 5 REST API — artifact: api-server</div>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">🚀</div>
+        <div class="card-name">Express 5</div>
+        <div class="card-role">إطار خادم HTTP — Routing، Middleware، Error Handling</div>
+        <div class="card-version">^5.2.1</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">🟢</div>
+        <div class="card-name">Node.js (ESM)</div>
+        <div class="card-role">بيئة تشغيل JavaScript على الخادم — ES Modules</div>
+        <div class="card-version">v22+</div>
+      </div>
+      <div class="card" style="--accent:var(--yellow)">
+        <div class="card-icon">📦</div>
+        <div class="card-name">esbuild</div>
+        <div class="card-role">تجميع وبناء الـ TypeScript إلى JavaScript بسرعة فائقة</div>
+        <div class="card-version">0.27.3</div>
+      </div>
+      <div class="card" style="--accent:var(--orange)">
+        <div class="card-icon">🔐</div>
+        <div class="card-name">JSON Web Token (JWT)</div>
+        <div class="card-role">المصادقة وإدارة جلسات المستخدمين — Access tokens</div>
+        <div class="card-version">^9.0.2</div>
+      </div>
+      <div class="card" style="--accent:var(--red)">
+        <div class="card-icon">🔑</div>
+        <div class="card-name">bcryptjs</div>
+        <div class="card-role">تشفير كلمات المرور — hashing + salting</div>
+        <div class="card-version">^2.4.3</div>
+      </div>
+      <div class="card" style="--accent:var(--cyan)">
+        <div class="card-icon">🍪</div>
+        <div class="card-name">cookie-parser</div>
+        <div class="card-role">معالجة الـ Cookies في طلبات HTTP</div>
+        <div class="card-version">^1.4.7</div>
+      </div>
+      <div class="card" style="--accent:var(--primary-light)">
+        <div class="card-icon">🌐</div>
+        <div class="card-name">CORS</div>
+        <div class="card-role">إدارة صلاحيات Cross-Origin بين الـ Frontend والـ Backend</div>
+        <div class="card-version">^2.8.6</div>
+      </div>
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">📁</div>
+        <div class="card-name">Multer</div>
+        <div class="card-role">رفع الملفات — Multipart Form Data</div>
+        <div class="card-version">^2.2.0</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">📋</div>
+        <div class="card-name">Pino / pino-http</div>
+        <div class="card-role">نظام تسجيل الأحداث (Logging) — structured JSON logs</div>
+        <div class="card-version">^9.14</div>
+      </div>
+      <div class="card" style="--accent:var(--pink)">
+        <div class="card-icon">🤖</div>
+        <div class="card-name">OpenAI SDK</div>
+        <div class="card-role">تكامل نماذج GPT-4o-mini — Monk AI assistant</div>
+        <div class="card-version">^4.103</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Database -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(96,165,250,0.15)">🗄️</div>
+      <div>
+        <h2>قاعدة البيانات</h2>
+        <div class="section-sub">PostgreSQL + Drizzle ORM — lib/db</div>
+      </div>
+    </div>
+    <div class="cards" style="margin-bottom:24px">
+      <div class="card" style="--accent:#336791">
+        <div class="card-icon">🐘</div>
+        <div class="card-name">PostgreSQL</div>
+        <div class="card-role">قاعدة البيانات الرئيسية — Relational, ACID, مستضافة على Replit</div>
+        <div class="card-version">v16</div>
+      </div>
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">🌿</div>
+        <div class="card-name">Drizzle ORM</div>
+        <div class="card-role">ORM خفيف وtype-safe — Schema definitions، migrations، queries</div>
+        <div class="card-version">catalog</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">🔧</div>
+        <div class="card-name">Drizzle Kit</div>
+        <div class="card-role">أداة push / generate للـ schema مباشرة إلى قاعدة البيانات</div>
+        <div class="card-version">^0.31</div>
+      </div>
+      <div class="card" style="--accent:var(--yellow)">
+        <div class="card-icon">✅</div>
+        <div class="card-name">Drizzle Zod</div>
+        <div class="card-role">توليد Zod schemas تلقائياً من تعريفات Drizzle</div>
+        <div class="card-version">^0.8.3</div>
+      </div>
+      <div class="card" style="--accent:var(--cyan)">
+        <div class="card-icon">🔌</div>
+        <div class="card-name">pg (node-postgres)</div>
+        <div class="card-role">تشغيل الاتصال بين Node.js وقاعدة بيانات PostgreSQL</div>
+        <div class="card-version">^8.22</div>
+      </div>
+    </div>
+
+    <!-- DB Schema -->
+    <div class="schema-grid">
+      <div class="schema-table">
+        <div class="schema-table-head">users</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">username <span>text unique</span></div>
+          <div class="schema-col">passwordHash <span>text</span></div>
+          <div class="schema-col">fullName <span>text</span></div>
+          <div class="schema-col">role <span>enum</span></div>
+          <div class="schema-col">accessActivated <span>boolean</span></div>
+          <div class="schema-col">trialExpiresAt <span>timestamp?</span></div>
+          <div class="schema-col">subscriptionActive <span>boolean</span></div>
+          <div class="schema-col">subscriptionExpiry <span>timestamp?</span></div>
+          <div class="schema-col">points <span>integer</span></div>
+          <div class="schema-col">level <span>text</span></div>
+        </div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-head">lectures</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">title <span>text</span></div>
+          <div class="schema-col">description <span>text</span></div>
+          <div class="schema-col">videoUrl <span>text</span></div>
+          <div class="schema-col">subject <span>text</span></div>
+          <div class="schema-col">createdAt <span>timestamp</span></div>
+        </div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-head">userProgress</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">userId <span>FK → users</span></div>
+          <div class="schema-col">lectureId <span>FK → lectures</span></div>
+          <div class="schema-col">completed <span>boolean</span></div>
+          <div class="schema-col">watchedSeconds <span>integer</span></div>
+          <div class="schema-col">completedAt <span>timestamp?</span></div>
+        </div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-head">quizAttempts</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">userId <span>FK → users</span></div>
+          <div class="schema-col">subject <span>text</span></div>
+          <div class="schema-col">score <span>integer</span></div>
+          <div class="schema-col">totalQuestions <span>integer</span></div>
+          <div class="schema-col">createdAt <span>timestamp</span></div>
+        </div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-head">chatSessions</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">userId <span>FK → users</span></div>
+          <div class="schema-col">messages <span>jsonb</span></div>
+          <div class="schema-col">createdAt <span>timestamp</span></div>
+        </div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-head">certificates</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">userId <span>FK → users</span></div>
+          <div class="schema-col">level <span>text</span></div>
+          <div class="schema-col">awardedAt <span>timestamp</span></div>
+          <div class="schema-col"><span>unique(userId, level)</span></div>
+        </div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-head">feedback</div>
+        <div class="schema-table-body">
+          <div class="schema-col">id <span>serial PK</span></div>
+          <div class="schema-col">userId <span>FK → users</span></div>
+          <div class="schema-col">category <span>enum</span></div>
+          <div class="schema-col">message <span>text</span></div>
+          <div class="schema-col">createdAt <span>timestamp</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Toolchain -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(251,191,36,0.15)">🛠️</div>
+      <div>
+        <h2>أدوات البناء والتطوير</h2>
+        <div class="section-sub">Monorepo toolchain, codegen, and API contract</div>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--accent:var(--yellow)">
+        <div class="card-icon">📦</div>
+        <div class="card-name">pnpm Workspaces</div>
+        <div class="card-role">إدارة monorepo — shared packages، workspace:* dependencies</div>
+        <div class="card-version">^9.x</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">📘</div>
+        <div class="card-name">TypeScript 5.9</div>
+        <div class="card-role">Type checking الكامل للـ Frontend والـ Backend والـ Libraries</div>
+        <div class="card-version">~5.9.3</div>
+      </div>
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">🔄</div>
+        <div class="card-name">Orval</div>
+        <div class="card-role">توليد API Client تلقائياً من OpenAPI spec — React Query hooks</div>
+        <div class="card-version">^8.23</div>
+      </div>
+      <div class="card" style="--accent:var(--orange)">
+        <div class="card-icon">📃</div>
+        <div class="card-name">OpenAPI 3.0 (YAML)</div>
+        <div class="card-role">مواصفة API الكاملة — contract بين Frontend والـ Backend</div>
+        <div class="card-version">3.0.x</div>
+      </div>
+      <div class="card" style="--accent:var(--pink)">
+        <div class="card-icon">💅</div>
+        <div class="card-name">Prettier</div>
+        <div class="card-role">تنسيق الكود تلقائياً عبر جميع ملفات المشروع</div>
+        <div class="card-version">^3.9</div>
+      </div>
+      <div class="card" style="--accent:var(--cyan)">
+        <div class="card-icon">🔌</div>
+        <div class="card-name">Replit Connectors SDK</div>
+        <div class="card-role">ربط الـ Integrations الخارجية بأمان (OAuth، API keys)</div>
+        <div class="card-version">^0.4.1</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. AI Integration -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(244,114,182,0.15)">🤖</div>
+      <div>
+        <h2>تكامل الذكاء الاصطناعي</h2>
+        <div class="section-sub">AI models powering Norv features</div>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">✨</div>
+        <div class="card-name">OpenAI GPT-4o-mini</div>
+        <div class="card-role">المحرك الأساسي لـ Monk AI — الدردشة، التلخيص، الشرح، توليد الأسئلة</div>
+        <div class="card-version">API v1</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">💎</div>
+        <div class="card-name">Google Gemini</div>
+        <div class="card-role">متاح كـ integration احتياطي — Replit AI proxy (لا يحتاج API key مباشر)</div>
+        <div class="card-version">Gemini Pro</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Architecture flow -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(34,211,238,0.15)">🏗️</div>
+      <div>
+        <h2>معمارية المشروع — Data Flow</h2>
+        <div class="section-sub">How a request travels through Norv</div>
+      </div>
+    </div>
+    <div class="flow" style="gap:4px; margin-bottom:24px">
+      <div class="flow-step">المستخدم<div class="sub">Browser</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">React SPA<div class="sub">Vite / Wouter</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">TanStack Query<div class="sub">Generated Hooks</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Orval Client<div class="sub">@workspace/api-client</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Express API<div class="sub">JWT Middleware</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Drizzle ORM<div class="sub">Query Builder</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">PostgreSQL<div class="sub">Replit DB</div></div>
+    </div>
+    <div class="flow" style="gap:4px">
+      <div class="flow-step">AI Request<div class="sub">User prompt</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Express Route<div class="sub">/api/chat</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">OpenAI SDK<div class="sub">GPT-4o-mini</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Stream Response<div class="sub">SSE / JSON</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Monk UI<div class="sub">Chat page</div></div>
+    </div>
+  </div>
+
+  <!-- 8. Features table -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(52,211,153,0.15)">✅</div>
+      <div>
+        <h2>الميزات المبنية وتقنياتها</h2>
+        <div class="section-sub">Every feature built and the stack behind it</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <table class="feat-table">
+        <thead>
+          <tr>
+            <th>الميزة</th>
+            <th>الوصف</th>
+            <th>التقنيات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>المصادقة (Auth)</td>
+            <td>تسجيل الدخول، التسجيل، JWT، حماية المسارات</td>
+            <td>
+              <span class="tag blue">JWT</span>
+              <span class="tag">bcryptjs</span>
+              <span class="tag green">Express middleware</span>
+              <span class="tag cyan">React Context</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Access Gate + Trial</td>
+            <td>بوابة وصول برمز تفعيل، تجربة مجانية 24 ساعة، انتهاء تلقائي</td>
+            <td>
+              <span class="tag">crypto.timingSafeEqual</span>
+              <span class="tag orange">Rate Limiting</span>
+              <span class="tag yellow">trialExpiresAt</span>
+              <span class="tag green">PostgreSQL</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Countdown Sidebar</td>
+            <td>عداد تنازلي حي للتجربة/الاشتراك مع قفل تلقائي</td>
+            <td>
+              <span class="tag cyan">setInterval</span>
+              <span class="tag blue">React useState</span>
+              <span class="tag">getMe() refresh</span>
+              <span class="tag green">Tailwind colors</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Monk AI Chatbot</td>
+            <td>مساعد ذكاء اصطناعي للطلاب — Markdown، code blocks، اقتراحات</td>
+            <td>
+              <span class="tag pink">OpenAI GPT-4o-mini</span>
+              <span class="tag">@tailwindcss/typography</span>
+              <span class="tag blue">React hooks</span>
+              <span class="tag green">Framer Motion</span>
+            </td>
+          </tr>
+          <tr>
+            <td>المحاضرات</td>
+            <td>عرض الفيديوهات، تتبع التقدم، علامة المشاهدة</td>
+            <td>
+              <span class="tag green">PostgreSQL</span>
+              <span class="tag">Drizzle ORM</span>
+              <span class="tag cyan">TanStack Query</span>
+              <span class="tag blue">Recharts</span>
+            </td>
+          </tr>
+          <tr>
+            <td>توليد الاختبارات</td>
+            <td>أسئلة AI حسب الموضوع، تقييم تلقائي، تسجيل النتائج</td>
+            <td>
+              <span class="tag pink">OpenAI API</span>
+              <span class="tag">Zod validation</span>
+              <span class="tag green">quizAttempts table</span>
+            </td>
+          </tr>
+          <tr>
+            <td>النقاط والمستويات</td>
+            <td>نظام نقاط — Beginner/Intermediate/Advanced/Expert</td>
+            <td>
+              <span class="tag">lib/level.ts</span>
+              <span class="tag green">PostgreSQL</span>
+              <span class="tag cyan">Progress API</span>
+            </td>
+          </tr>
+          <tr>
+            <td>الشهادات</td>
+            <td>شهادات PDF قابلة للتنزيل، unique per user/level</td>
+            <td>
+              <span class="tag yellow">Canvas API</span>
+              <span class="tag">PNG export</span>
+              <span class="tag green">onConflictDoNothing</span>
+            </td>
+          </tr>
+          <tr>
+            <td>ملف المستخدم</td>
+            <td>تعديل البيانات الشخصية، رفع الصورة، الاختصاص</td>
+            <td>
+              <span class="tag">Multer</span>
+              <span class="tag blue">React Hook Form</span>
+              <span class="tag">PATCH /profile</span>
+            </td>
+          </tr>
+          <tr>
+            <td>صفحة الاشتراك</td>
+            <td>خطط الدفع (شهري/سنوي)، CliQ، تفاصيل البنك</td>
+            <td>
+              <span class="tag cyan">Wouter</span>
+              <span class="tag">shadcn Card</span>
+              <span class="tag blue">Lucide icons</span>
+            </td>
+          </tr>
+          <tr>
+            <td>RTL + i18n</td>
+            <td>دعم العربية والإنجليزية الكامل — RTL Layout، ترجمة 50+ مفتاح</td>
+            <td>
+              <span class="tag">Tailwind logical utils</span>
+              <span class="tag cyan">React Context</span>
+              <span class="tag green">Custom translations.ts</span>
+            </td>
+          </tr>
+          <tr>
+            <td>لوحة الإدارة</td>
+            <td>إدارة المستخدمين، المحاضرات، البيانات الإحصائية</td>
+            <td>
+              <span class="tag red">Admin middleware</span>
+              <span class="tag blue">Recharts</span>
+              <span class="tag">TanStack Query</span>
+            </td>
+          </tr>
+          <tr>
+            <td>التغذية الراجعة</td>
+            <td>نموذج ملاحظات للطلاب، فئات محددة، عرض للمسؤول</td>
+            <td>
+              <span class="tag green">feedback table</span>
+              <span class="tag">Zod enum validation</span>
+              <span class="tag cyan">React Hook Form</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Dark / Light Mode</td>
+            <td>وضع مظلم وفاتح — persistent، system-aware</td>
+            <td>
+              <span class="tag">next-themes</span>
+              <span class="tag cyan">CSS variables</span>
+              <span class="tag blue">Tailwind dark:</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 9. Monorepo structure -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(124,58,237,0.15)">📁</div>
+      <div>
+        <h2>هيكل المشروع (Monorepo)</h2>
+        <div class="section-sub">pnpm workspace packages layout</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;font-family:'Fira Code',monospace;font-size:13px;line-height:2;direction:ltr;text-align:left">
+      <span style="color:var(--primary-light)">workspace/</span><br>
+      ├── <span style="color:var(--cyan)">artifacts/</span><br>
+      │   ├── <span style="color:var(--blue)">norv-ai/</span>           <span style="color:var(--text-muted)">← React + Vite frontend</span><br>
+      │   │   ├── src/<br>
+      │   │   │   ├── <span style="color:var(--green)">pages/</span>       <span style="color:var(--text-muted)">← Route pages (dashboard, chat, quiz…)</span><br>
+      │   │   │   ├── <span style="color:var(--green)">components/</span>  <span style="color:var(--text-muted)">← Reusable UI (AccessGate, Countdown…)</span><br>
+      │   │   │   ├── <span style="color:var(--green)">context/</span>     <span style="color:var(--text-muted)">← AuthContext, ThemeContext, LangContext</span><br>
+      │   │   │   └── <span style="color:var(--green)">i18n/</span>        <span style="color:var(--text-muted)">← translations.ts (EN + AR)</span><br>
+      │   └── <span style="color:var(--orange)">api-server/</span>        <span style="color:var(--text-muted)">← Express 5 backend</span><br>
+      │       └── src/<br>
+      │           ├── <span style="color:var(--yellow)">routes/</span>      <span style="color:var(--text-muted)">← auth, access, chat, lectures, quiz…</span><br>
+      │           ├── <span style="color:var(--yellow)">middleware/</span>  <span style="color:var(--text-muted)">← auth.ts (JWT + access guard)</span><br>
+      │           └── <span style="color:var(--yellow)">lib/</span>         <span style="color:var(--text-muted)">← level.ts, helpers</span><br>
+      └── <span style="color:var(--cyan)">lib/</span><br>
+          ├── <span style="color:var(--pink)">db/</span>                  <span style="color:var(--text-muted)">← Drizzle schema + pg connection</span><br>
+          ├── <span style="color:var(--pink)">api-spec/</span>            <span style="color:var(--text-muted)">← openapi.yaml + orval.config.ts</span><br>
+          ├── <span style="color:var(--pink)">api-client-react/</span>    <span style="color:var(--text-muted)">← Generated hooks (orval output)</span><br>
+          └── <span style="color:var(--pink)">api-zod/</span>             <span style="color:var(--text-muted)">← Generated Zod schemas (orval output)</span><br>
+    </div>
+  </div>
+
+  <!-- 10. Platform -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(251,146,60,0.15)">☁️</div>
+      <div>
+        <h2>بيئة الاستضافة والنشر</h2>
+        <div class="section-sub">Deployment, runtime, and infrastructure</div>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--accent:var(--orange)">
+        <div class="card-icon">🔷</div>
+        <div class="card-name">Replit</div>
+        <div class="card-role">منصة الاستضافة الكاملة — Dev، Preview، Deploy (Autoscale)</div>
+      </div>
+      <div class="card" style="--accent:var(--green)">
+        <div class="card-icon">🐧</div>
+        <div class="card-name">NixOS / Linux</div>
+        <div class="card-role">نظام تشغيل بيئة التطوير — Nix package manager</div>
+      </div>
+      <div class="card" style="--accent:var(--blue)">
+        <div class="card-icon">🔒</div>
+        <div class="card-name">mTLS Proxy</div>
+        <div class="card-role">بروكسي آمن بين المستخدم والخادم — Replit preview pane</div>
+      </div>
+      <div class="card" style="--accent:var(--cyan)">
+        <div class="card-icon">🔑</div>
+        <div class="card-name">Replit Secrets</div>
+        <div class="card-role">إدارة متغيرات البيئة والـ API keys بأمان (SESSION_SECRET, OPENAI_API_KEY)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div style="margin-bottom:8px;font-size:16px;font-weight:700;color:var(--text)">
+    ⚡ Norv — AI Educational Platform
+  </div>
+  وُثِّقت هذه التقنيات بتاريخ <strong>أغسطس 2026</strong> · تم البناء على <strong>Replit</strong> ·
+  جميع الحقوق محفوظة لفريق Norv
+</footer>
+
+</body>
+</html>
