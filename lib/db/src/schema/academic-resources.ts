@@ -50,6 +50,7 @@ export const teamProjectsTable = pgTable("team_projects", {
   completionPercent: integer("completion_percent").notNull().default(0),
   sharedCode: text("shared_code").notNull().default(""),
   codeLanguage: text("code_language").notNull().default("TypeScript"),
+  codeVersion: integer("code_version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

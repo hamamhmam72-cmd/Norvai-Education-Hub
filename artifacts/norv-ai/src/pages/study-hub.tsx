@@ -256,6 +256,7 @@ function TeamReview({ onLog }: { onLog: () => void }) {
 
 type TeamProjectView = { id: number; name: string };
 type TeamMessage = { id: number; userId: number; username?: string; fullName?: string; content: string | null; imageUrl: string | null; createdAt: string };
+type TeamCode = { sharedCode: string; codeLanguage: string; codeVersion: number; updatedAt: string };
 
 function TeamWorkspace() {
   const { toast } = useToast();
@@ -268,19 +269,105 @@ function TeamWorkspace() {
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("TypeScript");
   const [notice, setNotice] = useState("");
+  const [codeVersion, setCodeVersion] = useState(0);
+  const [codeDirty, setCodeDirty] = useState(false);
+  const [savingCode, setSavingCode] = useState(false);
+  const reconnectAttempt = useRef(0);
+  const codeDirtyRef = useRef(false);
+  const codeVersionRef = useRef(0);
   useEffect(() => { apiFetch<TeamProjectView[]>("/team/projects").then((items) => { setProjects(items); if (items[0]) setProjectId(String(items[0].id)); }).catch(() => undefined); }, []);
   useEffect(() => {
     if (!projectId) return;
+    let stopped = false;
+    setMessages([]);
+    setCode("");
+    setLanguage("TypeScript");
+    codeVersionRef.current = 0;
+    setCodeVersion(0);
+    codeDirtyRef.current = false;
+    setCodeDirty(false);
+    setNotice("");
+    const mergeMessages = (incoming: TeamMessage[]) => setMessages((items) => {
+      const byId = new Map(items.map((item) => [item.id, item]));
+      for (const item of incoming) byId.set(item.id, item);
+      return [...byId.values()].sort((a, b) => a.id - b.id);
+    });
+    const applyCodeSnapshot = (project: TeamCode) => {
+      if (stopped || project.codeVersion < codeVersionRef.current) return;
+      if (codeDirtyRef.current) {
+        if (project.codeVersion > codeVersionRef.current) {
+          setNotice("A teammate saved newer code. Save to review the conflict before overwriting.");
+        }
+        return;
+      }
+      setCode(project.sharedCode);
+      setLanguage(project.codeLanguage);
+      codeVersionRef.current = project.codeVersion;
+      setCodeVersion(project.codeVersion);
+      setNotice("");
+    };
     const refresh = () => Promise.all([
       apiFetch<TeamMessage[]>(`/team/projects/${projectId}/messages`),
-      apiFetch<{ sharedCode: string; codeLanguage: string }>(`/team/projects/${projectId}/code`),
-    ]).then(([nextMessages, project]) => { setMessages(nextMessages); setCode(project.sharedCode); setLanguage(project.codeLanguage); setNotice(""); })
-      .catch((error: Error) => setNotice(error.message));
+      apiFetch<TeamCode>(`/team/projects/${projectId}/code`),
+    ]).then(([nextMessages, project]) => {
+      if (stopped) return;
+      mergeMessages(nextMessages);
+      applyCodeSnapshot(project);
+    }).catch((error: Error) => { if (!stopped) setNotice(error.message); });
     refresh();
-    const timer = window.setInterval(() => {
-      apiFetch<TeamMessage[]>(`/team/projects/${projectId}/messages`).then(setMessages).catch(() => undefined);
-    }, 4000);
-    return () => window.clearInterval(timer);
+    let socket: WebSocket | undefined;
+    let reconnectTimer: number | undefined;
+    const mergeMessage = (item: TeamMessage) => setMessages((items) =>
+      items.some((existing) => existing.id === item.id) ? items : [...items, item].sort((a, b) => a.id - b.id));
+    const connect = () => {
+      const token = localStorage.getItem("norv_token");
+      if (!token || stopped) return;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(
+        `${protocol}//${window.location.host}/api/team/live?projectId=${encodeURIComponent(projectId)}`,
+        ["norv-team", token],
+      );
+      socket.onopen = () => {
+        reconnectAttempt.current = 0;
+        Promise.all([
+          apiFetch<TeamMessage[]>(`/team/projects/${projectId}/messages`),
+          apiFetch<TeamCode>(`/team/projects/${projectId}/code`),
+        ]).then(([nextMessages, project]) => {
+          if (stopped) return;
+          mergeMessages(nextMessages);
+          applyCodeSnapshot(project);
+        }).catch(() => undefined);
+      };
+      socket.onmessage = (event) => {
+        if (stopped) return;
+        const update = JSON.parse(event.data);
+        if (update.type === "message.created") mergeMessage(update.message);
+        if (update.type === "code.updated") {
+          const next = update.code as TeamCode;
+          if (next.codeVersion <= codeVersionRef.current) return;
+          if (codeDirtyRef.current) {
+            setNotice("A teammate saved newer code. Save to review the conflict before overwriting.");
+          } else {
+            setCode(next.sharedCode);
+            setLanguage(next.codeLanguage);
+            codeVersionRef.current = next.codeVersion;
+            setCodeVersion(next.codeVersion);
+            setNotice("");
+          }
+        }
+      };
+      socket.onclose = () => {
+        if (stopped) return;
+        const delay = Math.min(10_000, 500 * 2 ** reconnectAttempt.current++);
+        reconnectTimer = window.setTimeout(connect, delay);
+      };
+    };
+    connect();
+    return () => {
+      stopped = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      socket?.close();
+    };
   }, [projectId]);
   const createProject = async () => {
     try {
@@ -302,18 +389,35 @@ function TeamWorkspace() {
         if (!response.ok) throw new Error("Image upload failed");
         imageUrl = upload.objectPath;
       }
-      await apiFetch(`/team/projects/${projectId}/messages`, { method: "POST", body: JSON.stringify({ content: message, imageUrl }) });
+       const created = await apiFetch<TeamMessage>(`/team/projects/${projectId}/messages`, { method: "POST", body: JSON.stringify({ content: message, imageUrl }) });
       setMessage(""); setImage(null);
-      setMessages(await apiFetch<TeamMessage[]>(`/team/projects/${projectId}/messages`));
+      setMessages((items) => items.some((item) => item.id === created.id) ? items : [...items, created]);
     } catch (error) { toast({ variant: "destructive", description: error instanceof Error ? error.message : "Message failed" }); }
   };
-  const saveCode = async () => {
+  const saveCode = async (version = codeVersion) => {
+    setSavingCode(true);
     try {
-      await apiFetch(`/team/projects/${projectId}/code`, { method: "PUT", body: JSON.stringify({ code, language }) });
+      const saved = await apiFetch<TeamCode>(`/team/projects/${projectId}/code`, { method: "PUT", body: JSON.stringify({ code, language, expectedVersion: version }) });
+      codeVersionRef.current = saved.codeVersion;
+      setCodeVersion(saved.codeVersion);
+      codeDirtyRef.current = false;
+      setCodeDirty(false);
+      setNotice("");
       toast({ title: "Shared code saved", description: "Editors will see the latest version." });
-    } catch (error) { toast({ variant: "destructive", description: error instanceof Error ? error.message : "Save failed" }); }
+    } catch (error) {
+      const conflict = error as Error & { status?: number; payload?: { current?: TeamCode } };
+      const current = conflict.payload?.current;
+      if (conflict.status === 409 && current) {
+        setNotice("A teammate saved a newer version while you were editing.");
+        if (window.confirm("Newer shared code exists. Overwrite it with your current editor contents?")) {
+          await saveCode(current.codeVersion);
+        }
+      } else {
+        toast({ variant: "destructive", description: error instanceof Error ? error.message : "Save failed" });
+      }
+    } finally { setSavingCode(false); }
   };
-  return <Card className="border-primary/30"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary" />Team live workspace</CardTitle><CardDescription>Interactive chat, image sharing, and a shared code editor for Team subscribers.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-col gap-2 sm:flex-row"><Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="flex-1"><SelectValue placeholder="Choose a team project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select><Input value={projectName} onChange={(event) => setProjectName(event.target.value.slice(0, 160))} placeholder="New project name" className="sm:max-w-56" /><Button onClick={createProject} disabled={!projectName.trim()}><Plus className="me-2 size-4" />Create project</Button></div>{notice && <div className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700">{notice}</div>}<div className="grid gap-4 lg:grid-cols-2"><div className="space-y-3"><ScrollArea className="h-72 rounded-xl border p-3"><div className="space-y-3">{messages.map((item) => <div key={item.id} className="rounded-lg bg-muted/40 p-3"><div className="text-xs font-semibold text-primary">{item.fullName || item.username || "Team member"}</div>{item.content && <p className="mt-1 whitespace-pre-wrap text-sm">{item.content}</p>}{item.imageUrl && <TeamImage objectPath={item.imageUrl} />}</div>)}</div></ScrollArea><Textarea value={message} onChange={(event) => setMessage(event.target.value.slice(0, 2000))} placeholder="Message your team…" /><div className="flex flex-wrap gap-2"><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} className="max-w-xs" /><Button onClick={send} disabled={!projectId || (!message.trim() && !image)}>Send</Button></div></div><div className="space-y-3"><Select value={language} onValueChange={setLanguage}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["TypeScript", "JavaScript", "Python", "Java", "C++", "SQL", "Go", "Rust"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select><Textarea value={code} onChange={(event) => setCode(event.target.value.slice(0, 50000))} className="min-h-72 bg-zinc-950 font-mono text-sm text-zinc-100" placeholder="// Shared project code" /><Button onClick={saveCode} disabled={!projectId}>Save shared code</Button></div></div></CardContent></Card>;
+  return <Card className="border-primary/30"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary" />Team live workspace</CardTitle><CardDescription>Interactive chat, image sharing, and a shared code editor for Team subscribers.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-col gap-2 sm:flex-row"><Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="flex-1"><SelectValue placeholder="Choose a team project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select><Input value={projectName} onChange={(event) => setProjectName(event.target.value.slice(0, 160))} placeholder="New project name" className="sm:max-w-56" /><Button onClick={createProject} disabled={!projectName.trim()}><Plus className="me-2 size-4" />Create project</Button></div>{notice && <div className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700">{notice}</div>}<div className="grid gap-4 lg:grid-cols-2"><div className="space-y-3"><ScrollArea className="h-72 rounded-xl border p-3"><div className="space-y-3">{messages.map((item) => <div key={item.id} className="rounded-lg bg-muted/40 p-3"><div className="text-xs font-semibold text-primary">{item.fullName || item.username || "Team member"}</div>{item.content && <p className="mt-1 whitespace-pre-wrap text-sm">{item.content}</p>}{item.imageUrl && <TeamImage objectPath={item.imageUrl} />}</div>)}</div></ScrollArea><Textarea value={message} onChange={(event) => setMessage(event.target.value.slice(0, 2000))} placeholder="Message your team…" /><div className="flex flex-wrap gap-2"><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} className="max-w-xs" /><Button onClick={send} disabled={!projectId || (!message.trim() && !image)}>Send</Button></div></div><div className="space-y-3"><Select value={language} onValueChange={(value) => { setLanguage(value); codeDirtyRef.current = true; setCodeDirty(true); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["TypeScript", "JavaScript", "Python", "Java", "C++", "SQL", "Go", "Rust"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select><Textarea value={code} onChange={(event) => { setCode(event.target.value.slice(0, 50000)); codeDirtyRef.current = true; setCodeDirty(true); }} className="min-h-72 bg-zinc-950 font-mono text-sm text-zinc-100" placeholder="// Shared project code" /><Button onClick={() => saveCode()} disabled={!projectId || codeVersion < 1 || savingCode}>{savingCode ? <Loader2 className="size-4 animate-spin" /> : "Save shared code"}</Button></div></div></CardContent></Card>;
 }
 
 function TeamImage({ objectPath }: { objectPath: string }) {
