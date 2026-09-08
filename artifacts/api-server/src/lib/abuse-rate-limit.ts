@@ -1,4 +1,4 @@
-import { lte, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { abuseRateLimitsTable } from "@workspace/db/schema";
 
@@ -9,12 +9,30 @@ export class AbuseRateLimitUnavailableError extends Error {
   }
 }
 
+export const ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE = 100;
+
+async function cleanupExpiredCounters(now: Date) {
+  // Keep cleanup bounded so one protected request cannot scan/delete an
+  // unbounded backlog. The expiry index makes the candidate selection cheap.
+  await db.execute(sql`
+    WITH expired AS (
+      SELECT ${abuseRateLimitsTable.key}
+      FROM ${abuseRateLimitsTable}
+      WHERE ${abuseRateLimitsTable.expiresAt} <= ${now}
+      ORDER BY ${abuseRateLimitsTable.expiresAt}
+      LIMIT ${ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE}
+    )
+    DELETE FROM ${abuseRateLimitsTable}
+    WHERE ${abuseRateLimitsTable.key} IN (SELECT ${abuseRateLimitsTable.key} FROM expired)
+  `);
+}
+
 /**
  * Atomically consumes one request from a shared counter.
  *
- * Expired rows are removed opportunistically. The conflict update still
- * handles a concurrent request whose previous window expired, so separate
- * API instances cannot reset or bypass the same user's counter.
+ * A bounded batch of expired rows is removed opportunistically. The conflict
+ * update still handles a concurrent request whose previous window expired, so
+ * separate API instances cannot reset or bypass the same user's counter.
  */
 export async function allowAbuseRequest(
   key: string,
@@ -28,8 +46,7 @@ export async function allowAbuseRequest(
   const expiresAt = new Date(now.getTime() + windowMs);
 
   try {
-    await db.delete(abuseRateLimitsTable)
-      .where(lte(abuseRateLimitsTable.expiresAt, now));
+    await cleanupExpiredCounters(now);
 
     const [counter] = await db.insert(abuseRateLimitsTable).values({
       key,
