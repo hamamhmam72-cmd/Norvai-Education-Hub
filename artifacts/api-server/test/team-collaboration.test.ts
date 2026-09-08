@@ -35,7 +35,9 @@ test("authorized Team members receive message and attachment events immediately"
     readyState: WebSocket.OPEN,
     send(payload: string) { events.push(payload); },
   }));
-  const remove = sockets.map((socket) => hub.addSubscriber(12, socket as unknown as WebSocket));
+  const remove = sockets.map((socket, index) => (
+    hub.addSubscriber(12, 100 + index, socket as unknown as WebSocket)
+  ));
 
   hub.broadcast({
     type: "message.created",

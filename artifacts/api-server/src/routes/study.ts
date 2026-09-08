@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { toFile } from "openai";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -526,13 +526,59 @@ router.get("/team/projects/:id/messages", requireAuth, async (req, res): Promise
   res.json(rows.reverse());
 });
 
-router.post("/team/projects/:id/messages", requireAuth, async (req, res): Promise<void> => {
+type TeamMessageDependencies = {
+  getMembership?: typeof getTeamMembership;
+  consumeLimit?: typeof allowTeamMessage;
+  createMessage?: (input: {
+    projectId: number;
+    userId: number;
+    content: string | null;
+    imageUrl: string | null;
+  }) => Promise<unknown>;
+  broadcast?: typeof broadcastTeamEvent;
+};
+
+async function createTeamMessage({
+  projectId,
+  userId,
+  content,
+  imageUrl,
+}: {
+  projectId: number;
+  userId: number;
+  content: string | null;
+  imageUrl: string | null;
+}) {
+  const [created] = await db.insert(teamMessagesTable).values({
+    projectId, userId, content, imageUrl,
+  }).returning();
+  const [message] = await db.select({
+    id: teamMessagesTable.id,
+    content: teamMessagesTable.content,
+    imageUrl: teamMessagesTable.imageUrl,
+    createdAt: teamMessagesTable.createdAt,
+    userId: teamMessagesTable.userId,
+    username: usersTable.username,
+    fullName: usersTable.fullName,
+  }).from(teamMessagesTable)
+    .innerJoin(usersTable, eq(usersTable.id, teamMessagesTable.userId))
+    .where(eq(teamMessagesTable.id, created.id)).limit(1);
+  return message;
+}
+
+export function createTeamMessageHandler({
+  getMembership = getTeamMembership,
+  consumeLimit = allowTeamMessage,
+  createMessage = createTeamMessage,
+  broadcast = broadcastTeamEvent,
+}: TeamMessageDependencies = {}) {
+  return async (req: Request, res: Response): Promise<void> => {
   const projectId = Number(req.params.id);
-  const membership = Number.isInteger(projectId) ? await getTeamMembership(req.user!.userId, projectId) : null;
+  const membership = Number.isInteger(projectId) ? await getMembership(req.user!.userId, projectId) : null;
   if (!membership) { res.status(403).json({ error: "An active Team plan and project membership are required" }); return; }
   let messageAllowed: boolean;
   try {
-    messageAllowed = await allowTeamMessage(req.user!.userId);
+    messageAllowed = await consumeLimit(req.user!.userId);
   } catch (error) {
     if (error instanceof TeamMessageRateLimitUnavailableError) {
       req.log?.error?.({ err: error, userId: req.user!.userId }, "Team message rate-limit store unavailable");
@@ -550,23 +596,18 @@ router.post("/team/projects/:id/messages", requireAuth, async (req, res): Promis
   const imageUrl = typeof req.body?.imageUrl === "string" && /^\/objects\/[0-9a-f-]{36}$/i.test(req.body.imageUrl)
     ? req.body.imageUrl : null;
   if (!content && !imageUrl) { res.status(400).json({ error: "A message or image is required" }); return; }
-  const [created] = await db.insert(teamMessagesTable).values({
-    projectId, userId: req.user!.userId, content, imageUrl,
-  }).returning();
-  const [message] = await db.select({
-    id: teamMessagesTable.id,
-    content: teamMessagesTable.content,
-    imageUrl: teamMessagesTable.imageUrl,
-    createdAt: teamMessagesTable.createdAt,
-    userId: teamMessagesTable.userId,
-    username: usersTable.username,
-    fullName: usersTable.fullName,
-  }).from(teamMessagesTable)
-    .innerJoin(usersTable, eq(usersTable.id, teamMessagesTable.userId))
-    .where(eq(teamMessagesTable.id, created.id)).limit(1);
-  broadcastTeamEvent({ type: "message.created", projectId, message });
+  const message = await createMessage({
+    projectId,
+    userId: req.user!.userId,
+    content,
+    imageUrl,
+  });
+  broadcast({ type: "message.created", projectId, message });
   res.status(201).json(message);
-});
+  };
+}
+
+router.post("/team/projects/:id/messages", requireAuth, createTeamMessageHandler());
 
 router.get("/team/projects/:id/members", requireAuth, async (req, res): Promise<void> => {
   const projectId = Number(req.params.id);
