@@ -8,6 +8,7 @@ import {
   type TeamCodeSnapshot,
 } from "../src/lib/team-collaboration.ts";
 import { createTeamRealtimeHub } from "../src/lib/team-realtime-hub.ts";
+import { nextEntitlementCheckDelay } from "../src/lib/team-realtime.ts";
 import {
   mergeTeamMessages,
   shouldReconnectTeamSocket,
@@ -90,6 +91,14 @@ test("Study Hub never auto-reconnects after the security close code", () => {
   assert.equal(shouldReconnectTeamSocket(4403), false);
   assert.equal(shouldReconnectTeamSocket(1006), true);
   assert.equal(shouldReconnectTeamSocket(1012), true);
+});
+
+test("project entitlement checks are jittered instead of firing in one synchronized spike", () => {
+  assert.equal(nextEntitlementCheckDelay(0), 12_000);
+  assert.equal(nextEntitlementCheckDelay(0.5), 15_000);
+  assert.equal(nextEntitlementCheckDelay(1), 18_000);
+  assert.equal(nextEntitlementCheckDelay(-1), 12_000);
+  assert.equal(nextEntitlementCheckDelay(2), 18_000);
 });
 
 test("reconnect rehydration and live delivery do not duplicate persisted messages", () => {

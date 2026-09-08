@@ -32,6 +32,7 @@ type TeamPubSubEvent =
 const TEAM_EVENTS_CHANNEL = "norv_team_events";
 const reconnectDelayMs = 5_000;
 const entitlementCheckIntervalMs = 15_000;
+const entitlementCheckJitterRatio = 0.2;
 let pubSubClient: PoolClient | null = null;
 
 let releasePubSubClient: (() => void) | null = null;
@@ -49,32 +50,42 @@ type PoolClient = {
   release(destroy?: boolean): void;
 };
 
-async function emitToLocalSubscribers(event: TeamEvent) {
-  const userIds = realtimeHub.subscriberUserIds(event.projectId);
+export function nextEntitlementCheckDelay(randomValue = Math.random()) {
+  const boundedRandom = Math.min(1, Math.max(0, randomValue));
+  const jitter = (boundedRandom * 2 - 1) * entitlementCheckJitterRatio;
+  return Math.round(entitlementCheckIntervalMs * (1 + jitter));
+}
+
+async function revalidateProjectSubscribers(projectId: number) {
+  const userIds = realtimeHub.subscriberUserIds(projectId);
   if (userIds.length === 0) return;
+  const entitlements = await db.select({
+    userId: usersTable.id,
+    role: usersTable.role,
+    subscriptionActive: usersTable.subscriptionActive,
+    subscriptionTier: usersTable.subscriptionTier,
+    subscriptionExpiry: usersTable.subscriptionExpiry,
+    membershipId: teamProjectMembersTable.id,
+  }).from(usersTable)
+    .leftJoin(teamProjectMembersTable, and(
+      eq(teamProjectMembersTable.userId, usersTable.id),
+      eq(teamProjectMembersTable.projectId, projectId),
+    ))
+    .where(inArray(usersTable.id, userIds));
+  const authorized = new Set<number>();
+  for (const entitlement of entitlements) {
+    if (canAccessTeamProject(entitlement, entitlement.membershipId ? { id: entitlement.membershipId } : null)) {
+      authorized.add(entitlement.userId);
+    }
+  }
+  for (const userId of userIds) {
+    if (!authorized.has(userId)) realtimeHub.revokeAccess(userId, projectId);
+  }
+}
+
+async function emitToLocalSubscribers(event: TeamEvent) {
   try {
-    const entitlements = await db.select({
-      userId: usersTable.id,
-      role: usersTable.role,
-      subscriptionActive: usersTable.subscriptionActive,
-      subscriptionTier: usersTable.subscriptionTier,
-      subscriptionExpiry: usersTable.subscriptionExpiry,
-      membershipId: teamProjectMembersTable.id,
-    }).from(usersTable)
-      .leftJoin(teamProjectMembersTable, and(
-        eq(teamProjectMembersTable.userId, usersTable.id),
-        eq(teamProjectMembersTable.projectId, event.projectId),
-      ))
-      .where(inArray(usersTable.id, userIds));
-    const authorized = new Set<number>();
-    for (const entitlement of entitlements) {
-      if (canAccessTeamProject(entitlement, entitlement.membershipId ? { id: entitlement.membershipId } : null)) {
-        authorized.add(entitlement.userId);
-      }
-    }
-    for (const userId of userIds) {
-      if (!authorized.has(userId)) realtimeHub.revokeAccess(userId, event.projectId);
-    }
+    await revalidateProjectSubscribers(event.projectId);
     realtimeHub.broadcast(event);
   } catch (error) {
     logger.error({ err: error, projectId: event.projectId }, "Team broadcast authorization check failed");
@@ -286,8 +297,44 @@ export function getTeamRealtimeHealth(): TeamRealtimeHealth {
 
 export function attachTeamRealtime(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
+  const entitlementMonitors = new Map<number, {
+    subscribers: number;
+    timer: NodeJS.Timeout | null;
+  }>();
   realtimeClosed = false;
   void connectPubSub();
+
+  const scheduleProjectEntitlementCheck = (projectId: number) => {
+    const monitor = entitlementMonitors.get(projectId);
+    if (!monitor || monitor.timer) return;
+    monitor.timer = setTimeout(async () => {
+      monitor.timer = null;
+      try {
+        await revalidateProjectSubscribers(projectId);
+      } catch (error) {
+        logger.error({ err: error, projectId }, "Team realtime entitlement recheck failed");
+      } finally {
+        if (entitlementMonitors.has(projectId)) scheduleProjectEntitlementCheck(projectId);
+      }
+    }, nextEntitlementCheckDelay());
+  };
+  const acquireProjectEntitlementMonitor = (projectId: number) => {
+    const monitor = entitlementMonitors.get(projectId);
+    if (monitor) {
+      monitor.subscribers += 1;
+      return;
+    }
+    entitlementMonitors.set(projectId, { subscribers: 1, timer: null });
+    scheduleProjectEntitlementCheck(projectId);
+  };
+  const releaseProjectEntitlementMonitor = (projectId: number) => {
+    const monitor = entitlementMonitors.get(projectId);
+    if (!monitor) return;
+    monitor.subscribers -= 1;
+    if (monitor.subscribers > 0) return;
+    if (monitor.timer) clearTimeout(monitor.timer);
+    entitlementMonitors.delete(projectId);
+  };
 
   server.on("upgrade", async (request, socket, head) => {
     try {
@@ -323,15 +370,13 @@ export function attachTeamRealtime(server: Server) {
         const removeSubscriber = realtimeHub.addSubscriber(projectId, identity.userId, ws);
         let cleanedUp = false;
         let expiryTimer: NodeJS.Timeout | null = null;
-        let entitlementTimer: NodeJS.Timeout | null = null;
-        let entitlementCheckRunning = false;
+        acquireProjectEntitlementMonitor(projectId);
         const cleanup = () => {
           if (cleanedUp) return;
           cleanedUp = true;
           if (expiryTimer) clearTimeout(expiryTimer);
           expiryTimer = null;
-          if (entitlementTimer) clearInterval(entitlementTimer);
-          entitlementTimer = null;
+          releaseProjectEntitlementMonitor(projectId);
           removeSubscriber();
         };
         ws.on("error", (error) => {
@@ -352,34 +397,6 @@ export function attachTeamRealtime(server: Server) {
           };
           closeAtExpiry();
         }
-        entitlementTimer = setInterval(() => {
-          if (cleanedUp || entitlementCheckRunning) return;
-          entitlementCheckRunning = true;
-          void Promise.all([
-            db.select({
-              role: usersTable.role,
-              subscriptionActive: usersTable.subscriptionActive,
-              subscriptionTier: usersTable.subscriptionTier,
-              subscriptionExpiry: usersTable.subscriptionExpiry,
-            }).from(usersTable).where(eq(usersTable.id, identity.userId)).limit(1),
-            db.select({ id: teamProjectMembersTable.id }).from(teamProjectMembersTable)
-              .where(and(
-                eq(teamProjectMembersTable.projectId, projectId),
-                eq(teamProjectMembersTable.userId, identity.userId),
-              )).limit(1),
-          ]).then(([users, memberships]) => {
-            if (!canAccessTeamProject(users[0], memberships[0])) {
-              realtimeHub.revokeAccess(identity.userId, projectId);
-            }
-          }).catch((error) => {
-            logger.error(
-              { err: error, projectId, userId: identity.userId },
-              "Team realtime entitlement recheck failed",
-            );
-          }).finally(() => {
-            entitlementCheckRunning = false;
-          });
-        }, entitlementCheckIntervalMs);
         ws.send(JSON.stringify({ type: "ready", projectId }));
       });
     } catch {
@@ -393,6 +410,10 @@ export function attachTeamRealtime(server: Server) {
     realtimeClosed = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = null;
+    for (const monitor of entitlementMonitors.values()) {
+      if (monitor.timer) clearTimeout(monitor.timer);
+    }
+    entitlementMonitors.clear();
     const releaseClient = releasePubSubClient;
     releasePubSubClient = null;
     pubSubClient = null;
