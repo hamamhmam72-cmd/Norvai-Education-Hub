@@ -14,6 +14,7 @@ import {
 import {
   AbuseRateLimitUnavailableError,
   createAbuseRateLimiter,
+  recordAbuseRateLimitStoreUnavailable,
 } from "../src/lib/abuse-rate-limit.ts";
 import accessRouter from "../src/routes/access.ts";
 import studyRouter from "../src/routes/study.ts";
@@ -216,6 +217,38 @@ test("fails closed when the rate-limit store is unavailable", async () => {
 
   assert.equal(responseStatus, 503);
   assert.equal(protectedWorkRan, false);
+});
+
+test("rate-limit store alerts contain only safe route and user-scope metadata", () => {
+  const calls: Array<{ bindings: Record<string, unknown>; message: string }> = [];
+  const log = {
+    error(bindings: Record<string, unknown>, message: string) {
+      calls.push({ bindings, message });
+    },
+  };
+
+  recordAbuseRateLimitStoreUnavailable(log, "/study/materials/process", 42);
+  recordAbuseRateLimitStoreUnavailable(log, "/question-bank/quiz", 42);
+  recordAbuseRateLimitStoreUnavailable(log, "/access/activate", 42);
+
+  assert.deepEqual(calls, [
+    "/study/materials/process",
+    "/question-bank/quiz",
+    "/access/activate",
+  ].map((route) => ({
+    bindings: {
+      event: "rate_limit_store_unavailable",
+      store: "abuse_rate_limits",
+      route,
+      userScope: { kind: "user", id: 42 },
+    },
+    message: "Protected route rate-limit store unavailable",
+  })));
+  for (const call of calls) {
+    assert.equal("err" in call.bindings, false);
+    assert.equal("key" in call.bindings, false);
+    assert.equal("count" in call.bindings, false);
+  }
 });
 
 test("preserves the material-processing and activation 429 response bodies", async () => {

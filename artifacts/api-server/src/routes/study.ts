@@ -28,6 +28,7 @@ import {
 import {
   allowAbuseRequest,
   AbuseRateLimitUnavailableError,
+  recordAbuseRateLimitStoreUnavailable,
 } from "../lib/abuse-rate-limit.js";
 
 const router = Router();
@@ -96,7 +97,11 @@ router.post("/study/materials/process", requireAuth, materialUpload.single("file
     }
   } catch (error) {
     if (error instanceof AbuseRateLimitUnavailableError) {
-      req.log?.error?.({ err: error, userId: req.user!.userId }, "AI material rate-limit store unavailable");
+      recordAbuseRateLimitStoreUnavailable(
+        req.log,
+        "/study/materials/process",
+        req.user!.userId,
+      );
       res.status(503).json({ error: "AI limits are temporarily unavailable. Try again shortly." });
       return;
     }
@@ -298,7 +303,11 @@ router.post("/question-bank/quiz", requireAuth, async (req, res): Promise<void> 
     }
   } catch (error) {
     if (error instanceof AbuseRateLimitUnavailableError) {
-      req.log?.error?.({ err: error, userId: req.user!.userId }, "AI quiz rate-limit store unavailable");
+      recordAbuseRateLimitStoreUnavailable(
+        req.log,
+        "/question-bank/quiz",
+        req.user!.userId,
+      );
       res.status(503).json({ error: "AI limits are temporarily unavailable. Try again shortly." });
       return;
     }

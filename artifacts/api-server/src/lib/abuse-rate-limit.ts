@@ -9,6 +9,39 @@ export class AbuseRateLimitUnavailableError extends Error {
   }
 }
 
+export type AbuseRateLimitRoute =
+  | "/study/materials/process"
+  | "/question-bank/quiz"
+  | "/access/activate";
+
+type ErrorLogger = {
+  error: (bindings: Record<string, unknown>, message: string) => unknown;
+};
+
+/**
+ * Emit a stable, safe event for log-based alerts when a protected route cannot
+ * reach the shared limiter. Do not accept the counter key or underlying error:
+ * either could expose counter contents or database connection details.
+ */
+export function recordAbuseRateLimitStoreUnavailable(
+  log: ErrorLogger | undefined,
+  route: AbuseRateLimitRoute,
+  userId: number,
+) {
+  log?.error(
+    {
+      event: "rate_limit_store_unavailable",
+      store: "abuse_rate_limits",
+      route,
+      userScope: {
+        kind: "user",
+        id: userId,
+      },
+    },
+    "Protected route rate-limit store unavailable",
+  );
+}
+
 export const ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE = 100;
 
 async function cleanupExpiredCounters(database: typeof db, now: Date) {

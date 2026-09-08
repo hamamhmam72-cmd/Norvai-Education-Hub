@@ -8,6 +8,7 @@ import {
   allowAbuseRequest,
   AbuseRateLimitUnavailableError,
   clearAbuseCounter,
+  recordAbuseRateLimitStoreUnavailable,
 } from "../lib/abuse-rate-limit.js";
 
 const router = Router();
@@ -42,7 +43,7 @@ router.post("/access/activate", requireAuth, async (req, res) => {
     }
   } catch (error) {
     if (error instanceof AbuseRateLimitUnavailableError) {
-      req.log?.error?.({ err: error, userId: uid }, "Activation-code rate-limit store unavailable");
+      recordAbuseRateLimitStoreUnavailable(req.log, "/access/activate", uid);
       res.status(503).json({ error: "Activation limits are temporarily unavailable. Try again shortly." });
       return;
     }
