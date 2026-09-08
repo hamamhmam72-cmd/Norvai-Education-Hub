@@ -8,6 +8,10 @@ export interface TeamMessage {
   createdAt: string;
 }
 
+export function shouldReconnectTeamSocket(closeCode: number) {
+  return closeCode !== 4403;
+}
+
 /**
  * Rehydration and live delivery can contain the same persisted message.
  * IDs are the durable identity, so a later copy replaces an older copy.
