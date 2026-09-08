@@ -49,7 +49,7 @@ router.post("/auth/register", async (req, res) => {
     return;
   }
   if (!isValidUsername(username)) {
-    res.status(400).json({ error: "Username must start with a letter and contain 3-30 letters, numbers, or underscores." });
+    res.status(400).json({ error: "Username must be 3-30 characters and may contain Arabic or English letters, numbers, dots, underscores, or hyphens." });
     return;
   }
   if (!isStrongPassword(password)) {

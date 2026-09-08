@@ -56,7 +56,6 @@ export interface RegisterInput {
   /**
      * @minLength 3
      * @maxLength 30
-     * @pattern ^[A-Za-z][A-Za-z0-9_]{2,29}$
      */
   username: string;
   /**

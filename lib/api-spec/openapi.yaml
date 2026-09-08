@@ -1083,7 +1083,6 @@ components:
           type: string
           minLength: 3
           maxLength: 30
-          pattern: "^[A-Za-z][A-Za-z0-9_]{2,29}$"
         password:
           type: string
           minLength: 8

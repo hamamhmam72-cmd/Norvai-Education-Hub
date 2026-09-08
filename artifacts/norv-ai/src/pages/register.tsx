@@ -21,7 +21,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 const registerSchema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name").max(80, "Full name is too long")
     .regex(/^[\p{L}\p{M}][\p{L}\p{M}' -]*[\p{L}\p{M}]$/u, "Use letters, spaces, apostrophes, or hyphens only"),
-  username: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_]{2,29}$/, "Start with a letter; use 3-30 letters, numbers, or underscores"),
+  username: z.string().trim()
+    .regex(/^[\p{L}\p{N}][\p{L}\p{N}_.-]{2,29}$/u, "Use 3-30 Arabic or English letters, numbers, dots, underscores, or hyphens"),
   password: z.string().min(8, "Use at least 8 characters").max(72, "Use no more than 72 characters")
     .regex(/[A-Z]/, "Add one uppercase letter")
     .regex(/[a-z]/, "Add one lowercase letter")
@@ -137,6 +138,9 @@ export default function Register() {
                         </FormItem>
                       )}
                     />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      3–30 characters. Arabic and English letters, numbers, dots, underscores, and hyphens are allowed.
+                    </p>
                     <FormField
                       control={form.control}
                       name="username"

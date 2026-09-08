@@ -1,5 +1,5 @@
 const FULL_NAME_PATTERN = /^[\p{L}\p{M}][\p{L}\p{M}' -]*[\p{L}\p{M}]$/u;
-const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]{2,29}$/;
+const USERNAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}_.-]{2,29}$/u;
 
 export const PASSWORD_REQUIREMENTS =
   "Password must be 8-72 characters and include an uppercase letter, lowercase letter, number, and special character.";
