@@ -19,7 +19,8 @@ import {
 import { requireAuth } from "../middleware/auth.js";
 import { openai } from "../lib/openai.js";
 import { broadcastTeamEvent } from "../lib/team-realtime.js";
-import { saveTeamCodeWithVersion } from "../lib/team-collaboration.js";
+import { revokeTeamRealtimeAccess } from "../lib/team-realtime.js";
+import { hasActiveTeamSubscription, saveTeamCodeWithVersion } from "../lib/team-collaboration.js";
 import {
   allowTeamMessage,
   TeamMessageRateLimitUnavailableError,
@@ -157,8 +158,9 @@ async function getTeamMembership(userId: number, projectId: number) {
     role: usersTable.role,
     subscriptionActive: usersTable.subscriptionActive,
     subscriptionTier: usersTable.subscriptionTier,
+    subscriptionExpiry: usersTable.subscriptionExpiry,
   }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user || (user.role !== "admin" && (!user.subscriptionActive || user.subscriptionTier !== "team"))) return null;
+  if (!user || (user.role !== "admin" && !hasActiveTeamSubscription(user))) return null;
   const [membership] = await db.select().from(teamProjectMembersTable)
     .where(and(eq(teamProjectMembersTable.projectId, projectId), eq(teamProjectMembersTable.userId, userId))).limit(1);
   return user.role === "admin" ? { role: "owner" } : membership ?? null;
@@ -611,6 +613,40 @@ router.post("/team/projects/:id/members", requireAuth, async (req, res): Promise
       set: { role },
     }).returning();
   res.status(201).json({ ...member, username: invitee.username, fullName: invitee.fullName });
+});
+
+router.delete("/team/projects/:id/members/:userId", requireAuth, async (req, res): Promise<void> => {
+  const projectId = Number(req.params.id);
+  const userId = Number(req.params.userId);
+  if (!Number.isInteger(projectId) || !Number.isInteger(userId)) {
+    res.status(400).json({ error: "Valid project and user ids are required" });
+    return;
+  }
+  const membership = await getTeamMembership(req.user!.userId, projectId);
+  if (!membership || membership.role !== "owner") {
+    res.status(403).json({ error: "Only a Team-plan project owner can manage members" });
+    return;
+  }
+  const [target] = await db.select({ role: teamProjectMembersTable.role })
+    .from(teamProjectMembersTable)
+    .where(and(
+      eq(teamProjectMembersTable.projectId, projectId),
+      eq(teamProjectMembersTable.userId, userId),
+    )).limit(1);
+  if (!target) {
+    res.status(404).json({ error: "Team member not found" });
+    return;
+  }
+  if (target.role === "owner") {
+    res.status(400).json({ error: "The project owner cannot be removed" });
+    return;
+  }
+  await db.delete(teamProjectMembersTable).where(and(
+    eq(teamProjectMembersTable.projectId, projectId),
+    eq(teamProjectMembersTable.userId, userId),
+  ));
+  revokeTeamRealtimeAccess(userId, projectId);
+  res.status(204).end();
 });
 
 router.get("/academic/resources", requireAuth, async (req, res): Promise<void> => {

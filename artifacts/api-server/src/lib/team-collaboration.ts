@@ -2,6 +2,7 @@ export interface TeamUserEntitlement {
   role?: string | null;
   subscriptionActive?: boolean | null;
   subscriptionTier?: string | null;
+  subscriptionExpiry?: Date | string | null;
 }
 
 export interface TeamMembership {
@@ -10,7 +11,12 @@ export interface TeamMembership {
 }
 
 export function hasActiveTeamSubscription(user: TeamUserEntitlement | null | undefined) {
-  return Boolean(user?.subscriptionActive && user.subscriptionTier === "team");
+  const expiry = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
+  return Boolean(
+    user?.subscriptionActive
+    && user.subscriptionTier === "team"
+    && (!expiry || expiry > new Date()),
+  );
 }
 
 export function canAccessTeamProject(

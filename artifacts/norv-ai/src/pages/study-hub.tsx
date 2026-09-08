@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   AudioLines, BookOpen, BrainCircuit, Camera, CheckCircle2, Code2,
   FileText, ImagePlus, Library, Loader2, Mic, Play, Plus, Send,
-  Sparkles, Timer, Upload, Users, Wand2, X,
+  Sparkles, Timer, Trash2, Upload, Users, Wand2, X,
   GraduationCap, Network, BarChart3, ExternalLink,
 } from "lucide-react";
 import { useCreateSummary, useAnalyzeCode, type Summary, type DebugSession } from "@workspace/api-client-react";
@@ -272,6 +272,8 @@ function TeamWorkspace() {
   const [codeVersion, setCodeVersion] = useState(0);
   const [codeDirty, setCodeDirty] = useState(false);
   const [savingCode, setSavingCode] = useState(false);
+  const [accessRevoked, setAccessRevoked] = useState(false);
+  const [reconnectNonce, setReconnectNonce] = useState(0);
   const reconnectAttempt = useRef(0);
   const codeDirtyRef = useRef(false);
   const codeVersionRef = useRef(0);
@@ -287,6 +289,7 @@ function TeamWorkspace() {
     codeDirtyRef.current = false;
     setCodeDirty(false);
     setNotice("");
+    setAccessRevoked(false);
     const mergeMessages = (incoming: TeamMessage[]) => setMessages((items) => mergeTeamMessages(items, incoming));
     const applyCodeSnapshot = (project: TeamCode) => {
       if (stopped || project.codeVersion < codeVersionRef.current) return;
@@ -306,11 +309,17 @@ function TeamWorkspace() {
       apiFetch<TeamMessage[]>(`/team/projects/${projectId}/messages`),
       apiFetch<TeamCode>(`/team/projects/${projectId}/code`),
     ]).then(([nextMessages, project]) => {
-      if (stopped) return;
+      if (stopped) return false;
       mergeMessages(nextMessages);
       applyCodeSnapshot(project);
-    }).catch((error: Error) => { if (!stopped) setNotice(error.message); });
-    refresh();
+      return true;
+    }).catch((error: Error & { status?: number }) => {
+      if (!stopped) {
+        setNotice(error.message);
+        if (error.status === 403) setAccessRevoked(true);
+      }
+      return false;
+    });
     let socket: WebSocket | undefined;
     let reconnectTimer: number | undefined;
     const mergeMessage = (item: TeamMessage) => setMessages((items) => mergeTeamMessages(items, [item]));
@@ -324,6 +333,7 @@ function TeamWorkspace() {
       );
       socket.onopen = () => {
         reconnectAttempt.current = 0;
+        setAccessRevoked(false);
         Promise.all([
           apiFetch<TeamMessage[]>(`/team/projects/${projectId}/messages`),
           apiFetch<TeamCode>(`/team/projects/${projectId}/code`),
@@ -351,19 +361,26 @@ function TeamWorkspace() {
           }
         }
       };
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         if (stopped) return;
+        if (event.code === 4403) {
+          setAccessRevoked(true);
+          setNotice("Your Team access was removed or expired. Reconnect after access is restored.");
+          return;
+        }
         const delay = Math.min(10_000, 500 * 2 ** reconnectAttempt.current++);
         reconnectTimer = window.setTimeout(connect, delay);
       };
     };
-    connect();
+    void refresh().then((authorized) => {
+      if (authorized) connect();
+    });
     return () => {
       stopped = true;
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [projectId]);
+  }, [projectId, reconnectNonce]);
   const createProject = async () => {
     try {
       const project = await apiFetch<TeamProjectView>("/team/projects", {
@@ -412,7 +429,7 @@ function TeamWorkspace() {
       }
     } finally { setSavingCode(false); }
   };
-  return <Card className="border-primary/30"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary" />Team live workspace</CardTitle><CardDescription>Interactive chat, image sharing, and a shared code editor for Team subscribers.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-col gap-2 sm:flex-row"><Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="flex-1"><SelectValue placeholder="Choose a team project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select><Input value={projectName} onChange={(event) => setProjectName(event.target.value.slice(0, 160))} placeholder="New project name" className="sm:max-w-56" /><Button onClick={createProject} disabled={!projectName.trim()}><Plus className="me-2 size-4" />Create project</Button></div>{notice && <div className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700">{notice}</div>}<div className="grid gap-4 lg:grid-cols-2"><div className="space-y-3"><ScrollArea className="h-72 rounded-xl border p-3"><div className="space-y-3">{messages.map((item) => <div key={item.id} className="rounded-lg bg-muted/40 p-3"><div className="text-xs font-semibold text-primary">{item.fullName || item.username || "Team member"}</div>{item.content && <p className="mt-1 whitespace-pre-wrap text-sm">{item.content}</p>}{item.imageUrl && <TeamImage objectPath={item.imageUrl} />}</div>)}</div></ScrollArea><Textarea value={message} onChange={(event) => setMessage(event.target.value.slice(0, 2000))} placeholder="Message your team…" /><div className="flex flex-wrap gap-2"><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} className="max-w-xs" /><Button onClick={send} disabled={!projectId || (!message.trim() && !image)}>Send</Button></div></div><div className="space-y-3"><Select value={language} onValueChange={(value) => { setLanguage(value); codeDirtyRef.current = true; setCodeDirty(true); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["TypeScript", "JavaScript", "Python", "Java", "C++", "SQL", "Go", "Rust"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select><Textarea value={code} onChange={(event) => { setCode(event.target.value.slice(0, 50000)); codeDirtyRef.current = true; setCodeDirty(true); }} className="min-h-72 bg-zinc-950 font-mono text-sm text-zinc-100" placeholder="// Shared project code" /><Button onClick={() => saveCode()} disabled={!projectId || codeVersion < 1 || savingCode}>{savingCode ? <Loader2 className="size-4 animate-spin" /> : "Save shared code"}</Button></div></div></CardContent></Card>;
+  return <Card className="border-primary/30"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary" />Team live workspace</CardTitle><CardDescription>Interactive chat, image sharing, and a shared code editor for Team subscribers.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-col gap-2 sm:flex-row"><Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="flex-1"><SelectValue placeholder="Choose a team project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select><Input value={projectName} onChange={(event) => setProjectName(event.target.value.slice(0, 160))} placeholder="New project name" className="sm:max-w-56" /><Button onClick={createProject} disabled={!projectName.trim()}><Plus className="me-2 size-4" />Create project</Button></div>{notice && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700"><span>{notice}</span>{accessRevoked && <Button size="sm" variant="outline" onClick={() => setReconnectNonce((value) => value + 1)}>Reconnect</Button>}</div>}<div className="grid gap-4 lg:grid-cols-2"><div className="space-y-3"><ScrollArea className="h-72 rounded-xl border p-3"><div className="space-y-3">{messages.map((item) => <div key={item.id} className="rounded-lg bg-muted/40 p-3"><div className="text-xs font-semibold text-primary">{item.fullName || item.username || "Team member"}</div>{item.content && <p className="mt-1 whitespace-pre-wrap text-sm">{item.content}</p>}{item.imageUrl && <TeamImage objectPath={item.imageUrl} />}</div>)}</div></ScrollArea><Textarea value={message} onChange={(event) => setMessage(event.target.value.slice(0, 2000))} placeholder="Message your team…" disabled={accessRevoked} /><div className="flex flex-wrap gap-2"><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} className="max-w-xs" disabled={accessRevoked} /><Button onClick={send} disabled={accessRevoked || !projectId || (!message.trim() && !image)}>Send</Button></div></div><div className="space-y-3"><Select value={language} onValueChange={(value) => { setLanguage(value); codeDirtyRef.current = true; setCodeDirty(true); }} disabled={accessRevoked}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["TypeScript", "JavaScript", "Python", "Java", "C++", "SQL", "Go", "Rust"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select><Textarea value={code} onChange={(event) => { setCode(event.target.value.slice(0, 50000)); codeDirtyRef.current = true; setCodeDirty(true); }} className="min-h-72 bg-zinc-950 font-mono text-sm text-zinc-100" placeholder="// Shared project code" disabled={accessRevoked} /><Button onClick={() => saveCode()} disabled={accessRevoked || !projectId || codeVersion < 1 || savingCode}>{savingCode ? <Loader2 className="size-4 animate-spin" /> : "Save shared code"}</Button></div></div></CardContent></Card>;
 }
 
 function TeamImage({ objectPath }: { objectPath: string }) {
@@ -428,7 +445,7 @@ function TeamMembers() {
   const { toast } = useToast();
   const [projects, setProjects] = useState<Array<{ id: number; name: string }>>([]);
   const [projectId, setProjectId] = useState("");
-  const [members, setMembers] = useState<Array<{ id: number; username: string; fullName: string; role: string }>>([]);
+  const [members, setMembers] = useState<Array<{ id: number; userId: number; username: string; fullName: string; role: string }>>([]);
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("viewer");
   useEffect(() => { apiFetch<typeof projects>("/team/projects").then((items) => { setProjects(items); if (items[0]) setProjectId(String(items[0].id)); }).catch(() => undefined); }, []);
@@ -439,7 +456,16 @@ function TeamMembers() {
       setMembers((items) => [...items.filter((item) => item.id !== member.id), member]); setUsername("");
     } catch (error: any) { toast({ variant: "destructive", description: error.message }); }
   };
-  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary" />Team membership and permissions</CardTitle><CardDescription>Owners can add university teammates as editors or viewers.</CardDescription></CardHeader><CardContent className="space-y-4"><Select value={projectId} onValueChange={setProjectId}><SelectTrigger><SelectValue placeholder="Choose a project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select><div className="flex flex-wrap gap-2"><Input value={username} onChange={(event) => setUsername(event.target.value.slice(0, 120))} placeholder="Student username" className="max-w-xs" /><Select value={role} onValueChange={setRole}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="editor">Editor</SelectItem><SelectItem value="viewer">Viewer</SelectItem></SelectContent></Select><Button onClick={invite} disabled={!projectId || !username.trim()}>Add member</Button></div><div className="flex flex-wrap gap-2">{members.map((member) => <Badge key={member.id} variant="secondary">{member.fullName || member.username} · {member.role}</Badge>)}</div></CardContent></Card>;
+  const remove = async (member: typeof members[number]) => {
+    try {
+      await apiFetch<void>(`/team/projects/${projectId}/members/${member.userId}`, { method: "DELETE" });
+      setMembers((items) => items.filter((item) => item.userId !== member.userId));
+      toast({ title: "Team access removed", description: `${member.fullName || member.username} was disconnected from this project.` });
+    } catch (error: any) {
+      toast({ variant: "destructive", description: error.message });
+    }
+  };
+  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary" />Team membership and permissions</CardTitle><CardDescription>Owners can add university teammates as editors or viewers.</CardDescription></CardHeader><CardContent className="space-y-4"><Select value={projectId} onValueChange={setProjectId}><SelectTrigger><SelectValue placeholder="Choose a project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select><div className="flex flex-wrap gap-2"><Input value={username} onChange={(event) => setUsername(event.target.value.slice(0, 120))} placeholder="Student username" className="max-w-xs" /><Select value={role} onValueChange={setRole}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="editor">Editor</SelectItem><SelectItem value="viewer">Viewer</SelectItem></SelectContent></Select><Button onClick={invite} disabled={!projectId || !username.trim()}>Add member</Button></div><div className="space-y-2">{members.map((member) => <div key={member.id} className="flex items-center justify-between gap-2 rounded-lg border p-2"><Badge variant="secondary">{member.fullName || member.username} · {member.role}</Badge>{member.role !== "owner" && <Button size="icon" variant="ghost" aria-label={`Remove ${member.fullName || member.username}`} onClick={() => remove(member)}><Trash2 className="size-4" /></Button>}</div>)}</div></CardContent></Card>;
 }
 
 function VoiceNotes({ onLog }: { onLog: () => void }) {
