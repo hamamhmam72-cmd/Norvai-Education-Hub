@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test test/*.test.ts"
+    "test": "node --test --loader ./test/ts-source-loader.mjs test/*.test.ts"
   },
   "dependencies": {
     "@types/multer": "^2.2.0",

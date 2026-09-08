@@ -7,4 +7,4 @@ Node 24's built-in test runner can execute focused TypeScript tests without addi
 
 **Why:** Keeping small concurrency tests independent of the database and workspace bundler makes them runnable in a clean checkout, while the production build and typecheck continue to validate the integrated modules.
 
-**How to apply:** Put pure collaboration contracts and in-memory transport seams in dependency-light modules, and run them with `node --test` from the owning package.
+**How to apply:** Put pure collaboration contracts and in-memory transport seams in dependency-light modules, and run them with `node --test` from the owning package. When a test must exercise an Express route source graph, use a small loader to map extensionless/.js source imports to .ts and keep runtime-only imports separate from type imports.

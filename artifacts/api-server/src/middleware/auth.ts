@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express";
-import { verifyToken, JwtPayload } from "../lib/jwt.js";
+import { type Request, type Response, type NextFunction } from "express";
+import { verifyToken, type JwtPayload } from "../lib/jwt.js";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
