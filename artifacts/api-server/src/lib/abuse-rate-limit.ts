@@ -16,14 +16,14 @@ async function cleanupExpiredCounters(now: Date) {
   // unbounded backlog. The expiry index makes the candidate selection cheap.
   await db.execute(sql`
     WITH expired AS (
-      SELECT ${abuseRateLimitsTable.key}
+      SELECT ${sql.raw('"key"')}
       FROM ${abuseRateLimitsTable}
       WHERE ${abuseRateLimitsTable.expiresAt} <= ${now}
       ORDER BY ${abuseRateLimitsTable.expiresAt}
       LIMIT ${ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE}
     )
     DELETE FROM ${abuseRateLimitsTable}
-    WHERE ${abuseRateLimitsTable.key} IN (SELECT ${abuseRateLimitsTable.key} FROM expired)
+    WHERE ${abuseRateLimitsTable.key} IN (SELECT ${sql.raw('"key"')} FROM expired)
   `);
 }
 

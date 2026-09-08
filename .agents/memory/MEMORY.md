@@ -5,3 +5,4 @@
 - [Team entitlement boundary](team-entitlements.md) — collaborative projects, chat, images, and shared code require an active Team tier plus project membership
 - [Native TypeScript tests](native-typescript-tests.md) — Node 24 runs focused .ts tests directly; isolate them from workspace alias/database imports
 - [Realtime test lifecycle](team-realtime-test-lifecycle.md) — pub/sub clients need idempotent release when WebSocket servers close
+- [Bounded SQL cleanup](bounded-sql-cleanup.md) — qualify CTE output columns locally; table-qualified interpolation can correlate to the DELETE target.
