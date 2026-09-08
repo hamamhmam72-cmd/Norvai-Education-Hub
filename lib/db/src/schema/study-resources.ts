@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -25,6 +25,8 @@ export const questionBankItemsTable = pgTable("question_bank_items", {
 export const teamSnippetsTable = pgTable("team_snippets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
+  university: text("university").notNull(),
+  major: text("major").notNull(),
   title: text("title").notNull(),
   language: text("language").notNull(),
   code: text("code").notNull(),
@@ -33,10 +35,26 @@ export const teamSnippetsTable = pgTable("team_snippets", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const interviewSessionsTable = pgTable("interview_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull(),
+  mode: text("mode").notNull().default("text"),
+  language: text("language").notNull().default("English"),
+  status: text("status").notNull().default("active"),
+  messages: json("messages").notNull().default([]),
+  score: integer("score"),
+  feedback: text("feedback"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
 export const insertStudySessionSchema = createInsertSchema(studySessionsTable).omit({ id: true, createdAt: true });
 export const insertQuestionBankItemSchema = createInsertSchema(questionBankItemsTable).omit({ id: true, createdAt: true });
 export const insertTeamSnippetSchema = createInsertSchema(teamSnippetsTable).omit({ id: true, createdAt: true });
+export const insertInterviewSessionSchema = createInsertSchema(interviewSessionsTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type StudySession = z.infer<typeof insertStudySessionSchema>;
 export type QuestionBankItem = z.infer<typeof insertQuestionBankItemSchema>;
 export type TeamSnippet = z.infer<typeof insertTeamSnippetSchema>;
+export type InterviewSession = z.infer<typeof insertInterviewSessionSchema>;

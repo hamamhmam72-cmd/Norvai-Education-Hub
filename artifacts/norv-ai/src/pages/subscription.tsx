@@ -36,6 +36,8 @@ export default function Subscription() {
 
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionRequestInputPlan>("6months");
   const [receiptUrl, setReceiptUrl] = useState("");
+  const [transferReference, setTransferReference] = useState("");
+  const [senderName, setSenderName] = useState("");
   const [receiptInputMode, setReceiptInputMode] = useState<"url" | "upload">("url");
   const [imageUploading, setImageUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -82,12 +84,14 @@ export default function Subscription() {
       return;
     }
     requestSubscription.mutate(
-      { data: { plan: selectedPlan, receiptUrl } },
+      { data: { plan: selectedPlan, receiptUrl, transferReference, senderName } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetSubscriptionStatusQueryKey() });
           toast({ title: "Request Submitted", description: "Your subscription is pending approval." });
           setReceiptUrl("");
+          setTransferReference("");
+          setSenderName("");
           setImagePreview(null);
         },
         onError: (err: any) => {
@@ -244,6 +248,15 @@ export default function Subscription() {
                     </p>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="senderName">CliQ sender name</Label>
+                    <Input id="senderName" value={senderName} onChange={(event) => setSenderName(event.target.value.slice(0, 120))} placeholder="Name shown in your bank account" autoComplete="name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transferReference">CliQ transfer reference</Label>
+                    <Input id="transferReference" value={transferReference} onChange={(event) => setTransferReference(event.target.value.toUpperCase().replace(/[^A-Z0-9._-]/g, "").slice(0, 80))} placeholder="Reference / transaction ID" />
+                  </div>
+
                   {/* Toggle: URL vs Upload */}
                   <Tabs value={receiptInputMode} onValueChange={(v) => { setReceiptInputMode(v as "url" | "upload"); setReceiptUrl(""); setImagePreview(null); }}>
                     <TabsList className="w-full">
@@ -321,7 +334,7 @@ export default function Subscription() {
                   <Button
                     type="submit"
                     className="w-full h-12 text-base font-semibold group"
-                    disabled={requestSubscription.isPending || !receiptUrl.trim()}
+                    disabled={requestSubscription.isPending || !receiptUrl.trim() || !transferReference.trim() || !senderName.trim()}
                   >
                     {requestSubscription.isPending ? (
                       <Loader2 className="mr-2 size-5 animate-spin" />
@@ -335,7 +348,7 @@ export default function Subscription() {
 
                   <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted p-3 rounded-md">
                     <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                    <p>Accounts are verified manually. Fake receipts will result in an immediate permanent ban.</p>
+                    <p>The receipt is reviewed against the CliQ reference before activation. A screenshot alone does not prove that funds arrived.</p>
                   </div>
                 </form>
               </div>

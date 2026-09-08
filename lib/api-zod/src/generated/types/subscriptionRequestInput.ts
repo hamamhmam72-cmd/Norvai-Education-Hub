@@ -10,4 +10,6 @@ import type { SubscriptionRequestInputPlan } from './subscriptionRequestInputPla
 export interface SubscriptionRequestInput {
   plan: SubscriptionRequestInputPlan;
   receiptUrl: string;
+  transferReference: string;
+  senderName: string;
 }

@@ -928,7 +928,9 @@ export const GetSubscriptionStatusResponse = zod.object({
  */
 export const RequestSubscriptionBody = zod.object({
   "plan": zod.enum(['3months', '6months', '1year']),
-  "receiptUrl": zod.string()
+  "receiptUrl": zod.string(),
+  "transferReference": zod.string(),
+  "senderName": zod.string()
 })
 
 export const RequestSubscriptionResponse = zod.object({
@@ -939,6 +941,10 @@ export const RequestSubscriptionResponse = zod.object({
   "plan": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
+  "provider": zod.string().optional(),
+  "transferReference": zod.string().nullish(),
+  "senderName": zod.string().nullish(),
+  "amountFils": zod.number().nullish(),
   "rejectionReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -960,6 +966,10 @@ export const GetSubscriptionRequestsResponseItem = zod.object({
   "plan": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
+  "provider": zod.string().optional(),
+  "transferReference": zod.string().nullish(),
+  "senderName": zod.string().nullish(),
+  "amountFils": zod.number().nullish(),
   "rejectionReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -982,6 +992,10 @@ export const ApproveSubscriptionResponse = zod.object({
   "plan": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
+  "provider": zod.string().optional(),
+  "transferReference": zod.string().nullish(),
+  "senderName": zod.string().nullish(),
+  "amountFils": zod.number().nullish(),
   "rejectionReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -1007,6 +1021,10 @@ export const RejectSubscriptionResponse = zod.object({
   "plan": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
+  "provider": zod.string().optional(),
+  "transferReference": zod.string().nullish(),
+  "senderName": zod.string().nullish(),
+  "amountFils": zod.number().nullish(),
   "rejectionReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()

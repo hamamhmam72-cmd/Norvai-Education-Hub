@@ -141,7 +141,7 @@ function AdminSubscriptionsTab() {
     <Card className="border-border/50">
       <CardHeader>
         <CardTitle>Pending Subscriptions</CardTitle>
-        <CardDescription>Review and approve manual payment proofs.</CardDescription>
+        <CardDescription>Match the CliQ sender, reference, amount, and receipt before approving access.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -150,6 +150,7 @@ function AdminSubscriptionsTab() {
               <tr>
                 <th className="px-6 py-3">User</th>
                 <th className="px-6 py-3">Plan</th>
+                <th className="px-6 py-3">CliQ details</th>
                 <th className="px-6 py-3">Date</th>
                 <th className="px-6 py-3">Receipt</th>
                 <th className="px-6 py-3 text-right">Actions</th>
@@ -157,15 +158,20 @@ function AdminSubscriptionsTab() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
               ) : requests?.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">No pending requests.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No pending requests.</td></tr>
               ) : requests?.map((req) => (
                 <tr key={req.id} className="border-b border-border/50 hover:bg-muted/50">
                   <td className="px-6 py-4 font-medium">
                     {req.fullName} <span className="text-xs text-muted-foreground block">@{req.username}</span>
                   </td>
                   <td className="px-6 py-4 capitalize">{req.plan?.replace("months", " Months") ?? "-"}</td>
+                  <td className="px-6 py-4">
+                    <div className="font-medium">{req.senderName || "Unknown sender"}</div>
+                    <div className="font-mono text-xs text-muted-foreground">{req.transferReference || "No reference"}</div>
+                    <div className="text-xs text-muted-foreground">{req.amountFils != null ? `${(req.amountFils / 1000).toFixed(3)} JOD` : "Amount unavailable"}</div>
+                  </td>
                   <td className="px-6 py-4">{new Date(req.createdAt).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     <a href={req.receiptUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">

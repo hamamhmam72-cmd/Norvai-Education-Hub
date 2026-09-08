@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { subscriptionRequestsTable, usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
@@ -10,6 +10,11 @@ const PLAN_DURATION_MONTHS: Record<string, number> = {
   "3months": 3,
   "6months": 6,
   "1year": 12,
+};
+const PLAN_AMOUNT_FILS: Record<string, number> = {
+  "3months": 10_000,
+  "6months": 19_000,
+  "1year": 55_000,
 };
 
 // GET /api/subscriptions/status
@@ -32,27 +37,34 @@ router.get("/subscriptions/status", requireAuth, async (req, res) => {
     .where(eq(subscriptionRequestsTable.userId, uid));
 
   const pending = requests.find((r) => r.status === "pending");
+  const approved = requests
+    .filter((r) => r.status === "approved")
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
 
   res.json({
+    active: user.subscriptionActive,
+    plan: approved?.plan ?? null,
+    expiryDate: user.subscriptionExpiry?.toISOString() ?? null,
+    pendingRequest: Boolean(pending),
+    pendingRequestDate: pending?.createdAt.toISOString() ?? null,
     subscriptionActive: user.subscriptionActive,
     subscriptionExpiry: user.subscriptionExpiry?.toISOString() ?? null,
-    pendingRequest: pending
-      ? {
-          id: pending.id,
-          plan: pending.plan,
-          status: pending.status,
-          createdAt: pending.createdAt.toISOString(),
-        }
-      : null,
   });
 });
 
 // POST /api/subscriptions/request
 router.post("/subscriptions/request", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
-  const { plan, receiptUrl } = req.body;
-  if (!plan || !receiptUrl) {
-    res.status(400).json({ error: "plan and receiptUrl are required" });
+  const plan = typeof req.body.plan === "string" ? req.body.plan : "";
+  const receiptUrl = typeof req.body.receiptUrl === "string" ? req.body.receiptUrl.trim() : "";
+  const transferReference = typeof req.body.transferReference === "string"
+    ? req.body.transferReference.trim().toUpperCase().slice(0, 80)
+    : "";
+  const senderName = typeof req.body.senderName === "string"
+    ? req.body.senderName.trim().slice(0, 120)
+    : "";
+  if (!plan || !receiptUrl || !transferReference || !senderName) {
+    res.status(400).json({ error: "plan, receipt, sender name, and CliQ reference are required" });
     return;
   }
   const validPlans = ["3months", "6months", "1year"];
@@ -60,10 +72,37 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid plan" });
     return;
   }
+  if (!/^[A-Z0-9._-]{4,80}$/.test(transferReference)) {
+    res.status(400).json({ error: "Invalid CliQ transfer reference" });
+    return;
+  }
+  if (!receiptUrl.startsWith("data:image/") && !/^https:\/\/[^\\s]+$/i.test(receiptUrl)) {
+    res.status(400).json({ error: "Receipt must be an uploaded image or a secure HTTPS URL" });
+    return;
+  }
+  const [duplicate] = await db.select({ id: subscriptionRequestsTable.id })
+    .from(subscriptionRequestsTable)
+    .where(and(
+      eq(subscriptionRequestsTable.provider, "cliq"),
+      eq(subscriptionRequestsTable.transferReference, transferReference),
+    )).limit(1);
+  if (duplicate) {
+    res.status(409).json({ error: "This CliQ reference has already been submitted" });
+    return;
+  }
 
   const [request] = await db
     .insert(subscriptionRequestsTable)
-    .values({ userId: uid, plan, receiptUrl, status: "pending" })
+    .values({
+      userId: uid,
+      plan,
+      receiptUrl,
+      provider: "cliq",
+      transferReference,
+      senderName,
+      amountFils: PLAN_AMOUNT_FILS[plan],
+      status: "pending",
+    })
     .returning();
 
   res.status(201).json({
@@ -71,6 +110,10 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
     plan: request.plan,
     status: request.status,
     receiptUrl: request.receiptUrl,
+    provider: request.provider,
+    transferReference: request.transferReference,
+    senderName: request.senderName,
+    amountFils: request.amountFils,
     createdAt: request.createdAt.toISOString(),
   });
 });
@@ -89,6 +132,10 @@ router.get("/subscriptions", requireAdmin, async (req, res) => {
       plan: r.plan,
       status: r.status,
       receiptUrl: r.receiptUrl,
+      provider: r.provider,
+      transferReference: r.transferReference,
+      senderName: r.senderName,
+      amountFils: r.amountFils,
       rejectionReason: r.rejectionReason,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),

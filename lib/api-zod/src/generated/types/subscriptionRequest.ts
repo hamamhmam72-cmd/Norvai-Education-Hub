@@ -17,6 +17,13 @@ export interface SubscriptionRequest {
   plan: string;
   status: SubscriptionRequestStatus;
   receiptUrl: string;
+  provider?: string;
+  /** @nullable */
+  transferReference?: string | null;
+  /** @nullable */
+  senderName?: string | null;
+  /** @nullable */
+  amountFils?: number | null;
   /** @nullable */
   rejectionReason?: string | null;
   createdAt: string;

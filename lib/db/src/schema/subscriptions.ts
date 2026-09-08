@@ -14,6 +14,10 @@ export const subscriptionRequestsTable = pgTable("subscription_requests", {
   plan: text("plan").notNull(), // "3months" | "6months" | "1year"
   status: text("status").notNull().default("pending"), // "pending" | "approved" | "rejected"
   receiptUrl: text("receipt_url").notNull(),
+  provider: text("provider").notNull().default("cliq"),
+  transferReference: text("transfer_reference"),
+  senderName: text("sender_name"),
+  amountFils: integer("amount_fils"),
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

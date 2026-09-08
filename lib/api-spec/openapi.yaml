@@ -1685,12 +1685,16 @@ components:
 
     SubscriptionRequestInput:
       type: object
-      required: [plan, receiptUrl]
+      required: [plan, receiptUrl, transferReference, senderName]
       properties:
         plan:
           type: string
           enum: ["3months", "6months", "1year"]
         receiptUrl:
+          type: string
+        transferReference:
+          type: string
+        senderName:
           type: string
 
     SubscriptionRequest:
@@ -1712,6 +1716,14 @@ components:
           enum: [pending, approved, rejected]
         receiptUrl:
           type: string
+        provider:
+          type: string
+        transferReference:
+          type: ["string", "null"]
+        senderName:
+          type: ["string", "null"]
+        amountFils:
+          type: ["number", "null"]
         rejectionReason:
           type: ["string", "null"]
         createdAt:

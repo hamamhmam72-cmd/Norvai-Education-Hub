@@ -1,10 +1,11 @@
 import { useGetCareerRecommendations } from "@workspace/api-client-react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Compass, Briefcase, GraduationCap, Code2, AlertCircle, 
   ArrowRight, CheckCircle2, Loader2, Target, TrendingUp, Sparkles,
   BookOpen,
-  Clock
+  Clock, Mic, Send, Volume2
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,6 +13,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiFetch } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+
+type InterviewMessage = { role: "interviewer" | "candidate"; content: string };
+type InterviewSession = {
+  id: number; role: string; mode: string; language: string; status: string;
+  messages: InterviewMessage[]; score: number | null; feedback: string | null;
+};
 
 export default function CareerAdvisor() {
   const { user } = useAuth();
@@ -47,6 +60,8 @@ export default function CareerAdvisor() {
         {/* Decorative background */}
         <div className="absolute top-0 right-0 size-64 bg-primary/20 blur-[100px] rounded-full" />
       </div>
+
+      <MockInterview />
 
       {isLoading ? (
         <div className="space-y-8">
@@ -243,5 +258,110 @@ export default function CareerAdvisor() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function MockInterview() {
+  const { toast } = useToast();
+  const [role, setRole] = useState("Junior Software Engineer");
+  const [language, setLanguage] = useState("English");
+  const [mode, setMode] = useState("text");
+  const [answer, setAnswer] = useState("");
+  const [session, setSession] = useState<InterviewSession | null>(null);
+  const [loading, setLoading] = useState(false);
+  const recognition = useRef<any>(null);
+
+  const start = async () => {
+    setLoading(true);
+    try {
+      setSession(await apiFetch<InterviewSession>("/career/interviews", {
+        method: "POST", body: JSON.stringify({ role, language, mode }),
+      }));
+    } catch (error: any) {
+      toast({ variant: "destructive", description: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const respond = async () => {
+    if (!session || !answer.trim()) return;
+    setLoading(true);
+    try {
+      const updated = await apiFetch<InterviewSession>(`/career/interviews/${session.id}/respond`, {
+        method: "POST", body: JSON.stringify({ answer }),
+      });
+      setSession(updated);
+      setAnswer("");
+      const latest = [...updated.messages].reverse().find((message) => message.role === "interviewer");
+      if (latest && mode === "voice" && "speechSynthesis" in window) {
+        speechSynthesis.speak(new SpeechSynthesisUtterance(latest.content));
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", description: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const record = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ variant: "destructive", description: "Voice recognition is not supported in this browser." });
+      return;
+    }
+    const instance = new SpeechRecognition();
+    instance.lang = language === "Arabic" ? "ar-JO" : "en-US";
+    instance.onresult = (event: any) => setAnswer(event.results[0][0].transcript);
+    instance.start();
+    recognition.current = instance;
+  };
+
+  let feedback: any = null;
+  try { feedback = session?.feedback ? JSON.parse(session.feedback) : null; } catch { feedback = null; }
+
+  return (
+    <Card className="border-primary/30">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Mic className="size-5 text-primary" />Live Monk Mock Interview</CardTitle>
+        <CardDescription>Complete five adaptive questions, by text or voice, and receive a scored coaching report.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {!session ? (
+          <div className="grid gap-3 md:grid-cols-[1fr_180px_160px_auto]">
+            <Input value={role} onChange={(event) => setRole(event.target.value.slice(0, 100))} placeholder="Target role" />
+            <Select value={language} onValueChange={setLanguage}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="English">English</SelectItem><SelectItem value="Arabic">العربية</SelectItem></SelectContent></Select>
+            <Select value={mode} onValueChange={setMode}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="text">Text</SelectItem><SelectItem value="voice">Voice</SelectItem></SelectContent></Select>
+            <Button onClick={start} disabled={loading || !role.trim()}>{loading ? <Loader2 className="size-4 animate-spin" /> : "Start interview"}</Button>
+          </div>
+        ) : (
+          <>
+            <div className="max-h-80 space-y-3 overflow-y-auto rounded-xl bg-muted/30 p-4">
+              {session.messages.map((message, index) => (
+                <div key={index} className={cn("max-w-[85%] rounded-xl p-3 text-sm", message.role === "candidate" ? "ms-auto bg-primary text-primary-foreground" : "bg-card border")}>
+                  <div className="mb-1 text-[10px] font-bold uppercase opacity-60">{message.role === "candidate" ? "You" : "Monk"}</div>
+                  {message.content}
+                  {message.role === "interviewer" && mode === "voice" && <button className="ms-2 align-middle" onClick={() => speechSynthesis.speak(new SpeechSynthesisUtterance(message.content))}><Volume2 className="inline size-4" /></button>}
+                </div>
+              ))}
+            </div>
+            {session.status === "active" ? (
+              <div className="flex gap-2">
+                <Textarea value={answer} onChange={(event) => setAnswer(event.target.value.slice(0, 6000))} placeholder="Give a structured interview answer…" className="min-h-24" />
+                <div className="flex flex-col gap-2">
+                  {mode === "voice" && <Button variant="outline" size="icon" onClick={record} aria-label="Record answer"><Mic className="size-4" /></Button>}
+                  <Button size="icon" onClick={respond} disabled={loading || !answer.trim()} aria-label="Submit answer">{loading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5 md:grid-cols-[120px_1fr]">
+                <div><div className="text-4xl font-bold text-primary">{session.score}/100</div><div className="text-xs text-muted-foreground">Interview score</div></div>
+                <div className="space-y-3"><p>{feedback?.feedback || "Interview completed."}</p><div className="flex flex-wrap gap-2">{feedback?.strengths?.map((item: string) => <Badge key={item} variant="secondary">{item}</Badge>)}</div><Button variant="outline" onClick={() => setSession(null)}>Practice another role</Button></div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

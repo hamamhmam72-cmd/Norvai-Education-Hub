@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type HubTab = "materials" | "questions" | "team" | "voice" | "progress";
 type Question = { id: number; course: string; prompt: string; answer: string | null; sourceLabel: string | null; createdAt: string };
 type Productivity = { studyMinutes: number; summarizedFiles: number; codeReviews: number; teamProjectProgress: number };
+type MaterialResult = Summary & { questions?: string[]; transcript?: string; fileName?: string; mimeType?: string };
 
 const tabs: Array<{ id: HubTab; label: string; icon: typeof FileText }> = [
   { id: "materials", label: "Materials & Summary", icon: FileText },
@@ -112,7 +113,8 @@ function MaterialsPanel({ onLog }: { onLog: () => void }) {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
-  const [result, setResult] = useState<Summary | null>(null);
+  const [result, setResult] = useState<MaterialResult | null>(null);
+  const [processingFile, setProcessingFile] = useState(false);
   const createSummary = useCreateSummary();
 
   const readFile = async (file: File) => {
@@ -121,10 +123,31 @@ function MaterialsPanel({ onLog }: { onLog: () => void }) {
       setText(await file.text());
       return;
     }
-    toast({
-      title: "File attached",
-      description: "PDF, image, and audio capture are ready for the storage pipeline; paste extracted text here for immediate Monk analysis.",
-    });
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ variant: "destructive", description: "The maximum file size is 15 MB." });
+      return;
+    }
+    setProcessingFile(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const token = localStorage.getItem("norv_token");
+      const response = await fetch("/api/study/materials/process", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "File processing failed");
+      setResult(payload);
+      if (payload.transcript) setText(payload.transcript);
+      onLog();
+      toast({ title: "Study material created", description: `${file.name} was processed safely by Monk.` });
+    } catch (error: any) {
+      toast({ variant: "destructive", description: error.message });
+    } finally {
+      setProcessingFile(false);
+    }
   };
 
   const submit = (event: React.FormEvent) => {
@@ -145,9 +168,10 @@ function MaterialsPanel({ onLog }: { onLog: () => void }) {
         <CardHeader><CardTitle className="flex items-center gap-2"><Wand2 className="size-5 text-primary" />Smart material intake</CardTitle><CardDescription>Upload a text file, use the camera/gallery, or paste notes. Monk treats attached material as data, not instructions.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-sm hover:border-primary"><Upload className="size-4" />PDF / text file<input type="file" accept=".pdf,.txt,.md,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} /></label>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-sm hover:border-primary"><Camera className="size-4" />Capture / gallery<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} /></label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-sm hover:border-primary"><Upload className="size-4" />PDF / audio / text<input type="file" accept=".pdf,.txt,.md,.csv,audio/*" className="hidden" disabled={processingFile} onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} /></label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-sm hover:border-primary"><Camera className="size-4" />Capture / gallery<input type="file" accept="image/png,image/jpeg,image/webp" capture="environment" className="hidden" disabled={processingFile} onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} /></label>
           </div>
+          {processingFile && <div className="flex items-center gap-2 rounded-lg bg-primary/10 p-3 text-sm text-primary"><Loader2 className="size-4 animate-spin" />Monk is extracting and securing the material…</div>}
           {fileName && <Badge variant="secondary" className="gap-1"><FileText className="size-3" />{fileName}</Badge>}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2"><Label>Topic</Label><Input value={topic} onChange={(e) => setTopic(e.target.value.slice(0, 100))} /></div>
@@ -160,7 +184,7 @@ function MaterialsPanel({ onLog }: { onLog: () => void }) {
       <Card className="min-h-[520px]">
         <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="size-5 text-primary" />Monk result</CardTitle></CardHeader>
         <CardContent>
-          {!result ? <EmptyState icon={ImagePlus} text="Your summary, key points, and technical terms will appear here." /> : <ScrollArea className="h-[450px]"><div className="space-y-5"><div><Badge>{result.topic}</Badge><h2 className="mt-2 text-2xl font-bold">{result.title || "Document Summary"}</h2></div><p className="leading-relaxed">{result.summary}</p><div><h3 className="mb-2 font-semibold">Key points</h3><ul className="space-y-2">{result.keyPoints.map((point, index) => <li key={index} className="flex gap-2"><CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" />{point}</li>)}</ul></div><div className="flex flex-wrap gap-2">{(result.technicalTerms ?? []).map((term) => <Badge key={term} variant="outline">{term}</Badge>)}</div></div></ScrollArea>}
+          {!result ? <EmptyState icon={ImagePlus} text="Your summary, key points, review questions, and transcript will appear here." /> : <ScrollArea className="h-[450px]"><div className="space-y-5"><div><Badge>{result.topic}</Badge><h2 className="mt-2 text-2xl font-bold">{result.title || "Document Summary"}</h2>{result.fileName && <p className="text-xs text-muted-foreground">{result.fileName}</p>}</div><p className="leading-relaxed">{result.summary}</p><div><h3 className="mb-2 font-semibold">Key points</h3><ul className="space-y-2">{result.keyPoints.map((point, index) => <li key={index} className="flex gap-2"><CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" />{point}</li>)}</ul></div>{result.questions?.length ? <div><h3 className="mb-2 font-semibold">Review questions</h3><ol className="list-decimal space-y-2 ps-5 text-sm">{result.questions.map((question) => <li key={question}>{question}</li>)}</ol></div> : null}<div className="flex flex-wrap gap-2">{(result.technicalTerms ?? []).map((term) => <Badge key={term} variant="outline">{term}</Badge>)}</div>{result.transcript && <details><summary className="cursor-pointer font-semibold">Full extracted transcript</summary><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{result.transcript}</p></details>}</div></ScrollArea>}
         </CardContent>
       </Card>
     </div>
