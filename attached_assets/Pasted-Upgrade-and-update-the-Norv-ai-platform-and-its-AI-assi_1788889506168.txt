@@ -1,0 +1,35 @@
+Upgrade and update the Norv_ai platform and its AI assistant Monk to the latest version, applying the following comprehensive modifications to the frontend and backend system:
+
+1. Jordanian Governorates and Universities Dropdown Selectors
+
+Add dropdown select menus (Scroll Down) in the registration/login interface to select:
+
+Jordanian Governorates: (Amman, Irbid, Zarqa, Balqa, Mafraq, Karak, Tafilah, Ma'an, Aqaba, Ajloun, Jerash, Madaba).
+
+Jordanian Universities (Public and Private): (University of Jordan, Yarmouk University, Mutah University, Jordan University of Science and Technology, Hashemite University, Al al-Bayt University, Balqa Applied University, Al-Hussein Bin Talal University, Taftech, German-Jordanian University, Zarqa University, Isra University, Zaytoonah University, Princess Sumaya University for Technology, and all other well-known official and private Jordanian universities).
+
+2. Summarization, AI, and Payment System Enhancement
+
+In the summarization section, add flexible input options: sending a PDF file, taking a photo (Capture), or choosing an image from the gallery.
+
+In the payment and bank transfer section, configure the system to automatically verify the arrival of the transfer to the bank within just 3 seconds by analyzing the uploaded receipt image and automatically confirming the submission with the provided information.
+
+3. Lectures and Academic Resources Section
+
+Add a lectures section featuring lecture summaries and lectures by Arab professors.
+
+Add a dedicated field for attaching Jordanian professors' research papers.
+
+Allocate an independent section for memorization-based subjects (non-IT courses) featuring a single standalone subscription for 3 months priced at 10 JOD. It operates using the same mechanism (attaching a file, capturing, or image) to summarize everything inside the file, and includes a Quiz Generator or random questions based on the attached file.
+
+4. Advanced Features and Programming Additions
+
+Smart Team Code and Snippets System: Automatic code review feature via Monk, allowing any member to upload code so the AI detects errors/vulnerabilities and suggests fixes collaboratively for the rest of the team to see in a shared code and project repository.
+
+AI Mock Interviews: Directly integrate the career mentor with LinkedIn, featuring an AI-powered voice or text mock interview simulator tailored for IT companies, which evaluates student answers and provides an immediate strengthening report.
+
+Collaborative University Question Bank: Enable a system allowing students of the same university and major to share past years' questions and midterm/final exams, automatically generating smart quizzes from them via Monk.
+
+Voice Notes & Smart Study Assistant: Provide an option for direct audio recording of lectures, enabling the AI to transcribe the audio and convert it into summaries, mind maps, or review questions.
+
+Individual and Team Productivity Dashboard: Add charts showing students their study hours, summarized files, and team project completion progress to keep them motivated.
