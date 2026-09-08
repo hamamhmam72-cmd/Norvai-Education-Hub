@@ -24,6 +24,10 @@ import {
   allowTeamMessage,
   TeamMessageRateLimitUnavailableError,
 } from "../lib/team-message-rate-limit.js";
+import {
+  allowAbuseRequest,
+  AbuseRateLimitUnavailableError,
+} from "../lib/abuse-rate-limit.js";
 
 const router = Router();
 const allowedMaterialTypes = new Set([
@@ -35,19 +39,9 @@ const materialUpload = multer({
   limits: { fileSize: 15 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, callback) => callback(null, allowedMaterialTypes.has(file.mimetype)),
 });
-const aiUsage = new Map<number, { count: number; resetAt: number }>();
-
-function allowAiRequest(userId: number) {
-  const now = Date.now();
-  const current = aiUsage.get(userId);
-  if (!current || current.resetAt <= now) {
-    aiUsage.set(userId, { count: 1, resetAt: now + 60 * 60 * 1000 });
-    return true;
-  }
-  if (current.count >= 10) return false;
-  current.count += 1;
-  return true;
-}
+const AI_HOURLY_LIMIT = 10;
+const AI_HOURLY_WINDOW_MS = 60 * 60 * 1000;
+const aiLimitKey = (userId: number) => `ai-hourly:${userId}`;
 
 function parseMaterialResult(raw: string) {
   const normalized = raw
@@ -94,9 +88,18 @@ router.post("/study/materials/process", requireAuth, materialUpload.single("file
     res.status(400).json({ error: "Upload one PDF, PNG/JPEG/WebP image, or supported audio file" });
     return;
   }
-  if (!allowAiRequest(req.user!.userId)) {
-    res.status(429).json({ error: "Hourly material-processing limit reached. Try again later." });
-    return;
+  try {
+    if (!await allowAbuseRequest(aiLimitKey(req.user!.userId), AI_HOURLY_LIMIT, AI_HOURLY_WINDOW_MS)) {
+      res.status(429).json({ error: "Hourly material-processing limit reached. Try again later." });
+      return;
+    }
+  } catch (error) {
+    if (error instanceof AbuseRateLimitUnavailableError) {
+      req.log?.error?.({ err: error, userId: req.user!.userId }, "AI material rate-limit store unavailable");
+      res.status(503).json({ error: "AI limits are temporarily unavailable. Try again shortly." });
+      return;
+    }
+    throw error;
   }
   try {
     let result;
@@ -286,9 +289,18 @@ router.post("/question-bank/quiz", requireAuth, async (req, res): Promise<void> 
     res.status(400).json({ error: "At least three shared questions are needed to generate a quiz" });
     return;
   }
-  if (!allowAiRequest(req.user!.userId)) {
-    res.status(429).json({ error: "Hourly AI limit reached. Try again later." });
-    return;
+  try {
+    if (!await allowAbuseRequest(aiLimitKey(req.user!.userId), AI_HOURLY_LIMIT, AI_HOURLY_WINDOW_MS)) {
+      res.status(429).json({ error: "Hourly AI limit reached. Try again later." });
+      return;
+    }
+  } catch (error) {
+    if (error instanceof AbuseRateLimitUnavailableError) {
+      req.log?.error?.({ err: error, userId: req.user!.userId }, "AI quiz rate-limit store unavailable");
+      res.status(503).json({ error: "AI limits are temporarily unavailable. Try again shortly." });
+      return;
+    }
+    throw error;
   }
   try {
     const response = await openai.chat.completions.create({

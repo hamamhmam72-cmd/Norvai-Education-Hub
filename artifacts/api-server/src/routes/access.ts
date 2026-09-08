@@ -4,16 +4,20 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import crypto from "node:crypto";
+import {
+  allowAbuseRequest,
+  AbuseRateLimitUnavailableError,
+  clearAbuseCounter,
+} from "../lib/abuse-rate-limit.js";
 
 const router = Router();
 
 // Valid free activation codes (server-side only, never sent to client)
 const VALID_ACTIVATION_CODES = ["Norv.ai.h52"];
 
-// Simple in-memory rate limiting: max 5 attempts per user per 10 minutes
-const attempts = new Map<number, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 10 * 60 * 1000;
+const activationLimitKey = (userId: number) => `activation-code:${userId}`;
 
 function safeCompare(a: string, b: string): boolean {
   const ha = crypto.createHash("sha256").update(a).digest();
@@ -31,16 +35,18 @@ router.post("/access/activate", requireAuth, async (req, res) => {
     return;
   }
 
-  const now = Date.now();
-  const entry = attempts.get(uid);
-  if (entry && entry.resetAt > now && entry.count >= MAX_ATTEMPTS) {
-    res.status(429).json({ error: "Too many attempts. Try again later." });
-    return;
-  }
-  if (!entry || entry.resetAt <= now) {
-    attempts.set(uid, { count: 1, resetAt: now + WINDOW_MS });
-  } else {
-    entry.count++;
+  try {
+    if (!await allowAbuseRequest(activationLimitKey(uid), MAX_ATTEMPTS, WINDOW_MS)) {
+      res.status(429).json({ error: "Too many attempts. Try again later." });
+      return;
+    }
+  } catch (error) {
+    if (error instanceof AbuseRateLimitUnavailableError) {
+      req.log?.error?.({ err: error, userId: uid }, "Activation-code rate-limit store unavailable");
+      res.status(503).json({ error: "Activation limits are temporarily unavailable. Try again shortly." });
+      return;
+    }
+    throw error;
   }
 
   const valid = VALID_ACTIVATION_CODES.some((c) => safeCompare(c, code.trim()));
@@ -56,7 +62,7 @@ router.post("/access/activate", requireAuth, async (req, res) => {
     .where(eq(usersTable.id, uid))
     .returning();
 
-  attempts.delete(uid);
+  await clearAbuseCounter(activationLimitKey(uid));
   res.json({
     activated: true,
     accessActivated: user.accessActivated,
