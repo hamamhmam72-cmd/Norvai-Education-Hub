@@ -1,5 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createServer, request as httpRequest, type AddressInfo, type Server } from "node:http";
+import express from "express";
+import { db } from "@workspace/db";
+import {
+  teamMessageRateLimitsTable,
+  teamMessagesTable,
+  teamProjectMembersTable,
+  teamProjectsTable,
+  usersTable,
+} from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import {
   canAccessTeamProject,
   canEditTeamProject,
@@ -7,6 +18,9 @@ import {
   type TeamCodeSnapshot,
 } from "../src/lib/team-collaboration.ts";
 import { createTeamRealtimeHub } from "../src/lib/team-realtime-hub.ts";
+import { attachTeamRealtime } from "../src/lib/team-realtime.ts";
+import { signToken } from "../src/lib/jwt.ts";
+import studyRouter from "../src/routes/study.ts";
 import {
   mergeTeamMessages,
   type TeamMessage,
@@ -102,15 +116,290 @@ test("simultaneous saves accept one version and return the current version to th
   const results = [first, second];
 
   assert.equal(results.filter((result) => result.status === 200).length, 1);
-  const conflict = results.find((result) => result.status === 409);
-  assert.ok(conflict);
-  if (conflict?.status === 409) assert.equal(conflict.current.codeVersion, 2);
-  assert.equal(current.codeVersion, 2);
+    const conflict = saves.find((response) => response.status === 409);
+
+type ApiResponse = {
+  status: number;
+  body: any;
+};
+    assert.ok(conflict);
+    assert.equal(conflict.body.error, "Newer shared code is available");
+    assert.equal(conflict.body.current.codeVersion, 2);
+    assert.equal(conflict.body.current.sharedCode, saves.find((response) => response.status === 200)?.body.sharedCode);
+  } finally {
+    ownerWebSocket?.terminate();
+    viewerWebSocket?.terminate();
+    ownerSocket.socket.terminate();
+    viewerSocket.socket.terminate();
+    await closeTeamFixture(fixture);
+  }
 });
 
-test("viewers and non-Team users cannot subscribe or save", () => {
-  assert.equal(canAccessTeamProject(teamUser, { role: "viewer" }), true);
-  assert.equal(canEditTeamProject(teamUser, viewer), false);
-  assert.equal(canAccessTeamProject({ role: "student", subscriptionActive: true, subscriptionTier: "individual" }, membership), false);
-  assert.equal(canEditTeamProject({ role: "student", subscriptionActive: true, subscriptionTier: "individual" }, membership), false);
-});
+  let ownerWebSocket: WebSocket | undefined;
+
+const fixturePrefix = `team-db-${process.pid}-${Date.now()}`;
+
+    const persistedImage = await apiRequest(
+      fixture.server,
+      fixture.tokens.owner,
+      "POST",
+      `/api/team/projects/${fixture.projectId}/messages`,
+      { imageUrl: "/objects/123e4567-e89b-12d3-a456-426614174000" },
+    );
+
+    const messages = await apiRequest(
+      fixture.server,
+      fixture.tokens.viewer,
+      "GET",
+      `/api/team/projects/${fixture.projectId}/messages`,
+    );
+
+    const individualSocketStatus = await rejectedTeamSocket(fixture.server, fixture.tokens.individual, fixture.projectId);
+
+type TeamFixture = {
+  ownerId: number;
+  editorId: number;
+  viewerId: number;
+  individualId: number;
+  projectId: number;
+  server: Server;
+  tokens: {
+    owner: string;
+    editor: string;
+    viewer: string;
+    individual: string;
+  };
+};
+
+  let viewerWebSocket: WebSocket | undefined;
+
+    const persistedMessage = await apiRequest(
+      fixture.server,
+      fixture.tokens.owner,
+      "POST",
+      `/api/team/projects/${fixture.projectId}/messages`,
+      { content: "Persisted database message" },
+    );
+
+    const viewerSave = await apiRequest(
+      fixture.server,
+      fixture.tokens.viewer,
+      "PUT",
+      `/api/team/projects/${fixture.projectId}/code`,
+      { code: "viewer cannot save", language: "TypeScript", expectedVersion: 1 },
+    );
+
+async function closeTeamFixture(fixture: TeamFixture) {
+  fixture.server.close();
+  fixture.server.closeAllConnections?.();
+  fixture.server.closeIdleConnections?.();
+  await new Promise((resolve) => setImmediate(resolve));
+  await db.delete(teamMessageRateLimitsTable).where(eq(teamMessageRateLimitsTable.userId, fixture.ownerId));
+  await db.delete(teamMessagesTable).where(eq(teamMessagesTable.projectId, fixture.projectId));
+  await db.delete(teamProjectMembersTable).where(eq(teamProjectMembersTable.projectId, fixture.projectId));
+  await db.delete(teamProjectsTable).where(eq(teamProjectsTable.id, fixture.projectId));
+  await db.delete(usersTable).where(eq(usersTable.id, fixture.ownerId));
+  await db.delete(usersTable).where(eq(usersTable.id, fixture.editorId));
+  await db.delete(usersTable).where(eq(usersTable.id, fixture.viewerId));
+  await db.delete(usersTable).where(eq(usersTable.id, fixture.individualId));
+}
+
+    const individualRead = await apiRequest(
+      fixture.server,
+      fixture.tokens.individual,
+      "GET",
+      `/api/team/projects/${fixture.projectId}/messages`,
+    );
+
+function rejectedTeamSocket(server: Server, token: string, projectId: number) {
+  return new Promise<number>((resolve) => {
+    const request = httpRequest({
+      port: serverPort(server),
+      path: `/api/team/live?projectId=${projectId}`,
+      headers: {
+        connection: "Upgrade",
+        upgrade: "websocket",
+        "sec-websocket-version": "13",
+        "sec-websocket-key": "MTIzNDU2Nzg5MGFiY2RlZg==",
+        "sec-websocket-protocol": `norv-team, ${token}`,
+      },
+    }, (response) => {
+      response.resume();
+      resolve(response.statusCode ?? 0);
+    });
+    request.on("upgrade", (_response, socket) => {
+      socket.destroy();
+      resolve(101);
+    });
+    request.on("error", () => resolve(0));
+    request.end();
+  });
+}
+
+    const saves = await Promise.all([
+      apiRequest(
+        fixture.server,
+        fixture.tokens.owner,
+        "PUT",
+        `/api/team/projects/${fixture.projectId}/code`,
+        { code: "const winner = 1;", language: "TypeScript", expectedVersion: 1 },
+      ),
+      apiRequest(
+        fixture.server,
+        fixture.tokens.editor,
+        "PUT",
+        `/api/team/projects/${fixture.projectId}/code`,
+        { code: "const winner = 2;", language: "TypeScript", expectedVersion: 1 },
+      ),
+    ]);
+
+  const viewerSocket = openTeamSocket(fixture.server, fixture.tokens.viewer, fixture.projectId);
+
+function serverPort(server: Server) {
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  return (address as AddressInfo).port;
+}
+
+function openTeamSocket(server: Server, token: string, projectId: number) {
+  const events: any[] = [];
+  const socket = new WebSocket(
+    `ws://127.0.0.1:${serverPort(server)}/api/team/live?projectId=${projectId}`,
+    ["norv-team", token],
+  );
+  socket.on("message", (payload) => events.push(JSON.parse(payload.toString())));
+  const opened = new Promise<WebSocket>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out opening team WebSocket")), 5_000);
+    socket.once("open", () => {
+      clearTimeout(timeout);
+      resolve(socket);
+    });
+    socket.once("error", reject);
+  });
+  return { socket, events, opened };
+}
+
+function tokenForUser(userId: number, username: string) {
+  return signToken({ userId, username, role: "student" });
+}
+
+  const ownerSocket = openTeamSocket(fixture.server, fixture.tokens.owner, fixture.projectId);
+
+async function apiRequest(
+  server: Server,
+  token: string,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<ApiResponse> {
+  const response = await fetch(`http://127.0.0.1:${serverPort(server)}${path}`, {
+    method,
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const raw = await response.text();
+  return {
+    status: response.status,
+    body: raw ? JSON.parse(raw) : null,
+  };
+}
+
+  const fixture = await createTeamFixture();
+
+async function createTeamFixture(): Promise<TeamFixture> {
+  const users = await db.insert(usersTable).values([
+    {
+      username: `${fixturePrefix}-owner`,
+      fullName: "Database Team Owner",
+      passwordHash: "test-only",
+      university: "Database University",
+      major: "Database Engineering",
+      setupComplete: true,
+      subscriptionActive: true,
+      subscriptionTier: "team",
+    },
+    {
+      username: `${fixturePrefix}-editor`,
+      fullName: "Database Team Editor",
+      passwordHash: "test-only",
+      university: "Database University",
+      major: "Database Engineering",
+      setupComplete: true,
+      subscriptionActive: true,
+      subscriptionTier: "team",
+    },
+    {
+      username: `${fixturePrefix}-viewer`,
+      fullName: "Database Team Viewer",
+      passwordHash: "test-only",
+      university: "Database University",
+      major: "Database Engineering",
+      setupComplete: true,
+      subscriptionActive: true,
+      subscriptionTier: "team",
+    },
+    {
+      username: `${fixturePrefix}-individual`,
+      fullName: "Database Individual User",
+      passwordHash: "test-only",
+      university: "Database University",
+      major: "Database Engineering",
+      setupComplete: true,
+      subscriptionActive: true,
+      subscriptionTier: "individual",
+    },
+  ]).returning({
+    id: usersTable.id,
+    username: usersTable.username,
+  });
+  const [owner, editor, viewerUser, individual] = users;
+
+  const [project] = await db.insert(teamProjectsTable).values({
+    ownerId: owner.id,
+    university: "Database University",
+    major: "Database Engineering",
+    name: `${fixturePrefix}-project`,
+    sharedCode: "const initial = true;",
+    codeLanguage: "TypeScript",
+    codeVersion: 1,
+  }).returning({ id: teamProjectsTable.id });
+
+  await db.insert(teamProjectMembersTable).values([
+    { projectId: project.id, userId: owner.id, role: "owner" },
+    { projectId: project.id, userId: editor.id, role: "editor" },
+    { projectId: project.id, userId: viewerUser.id, role: "viewer" },
+  ]);
+
+  const integrationApp = express();
+  integrationApp.use(express.json());
+  integrationApp.use("/api", studyRouter);
+  const server = createServer(integrationApp);
+  attachTeamRealtime(server);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+
+  return {
+    ownerId: owner.id,
+    editorId: editor.id,
+    viewerId: viewerUser.id,
+    individualId: individual.id,
+    projectId: project.id,
+    server,
+    tokens: {
+      owner: tokenForUser(owner.id, owner.username),
+      editor: tokenForUser(editor.id, editor.username),
+      viewer: tokenForUser(viewerUser.id, viewerUser.username),
+      individual: tokenForUser(individual.id, individual.username),
+    },
+  };
+}
+
+async function waitForEvents(events: any[], count: number) {
+  const deadline = Date.now() + 5_000;
+  while (events.length < count && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.ok(events.length >= count, `Expected ${count} WebSocket events, received ${events.length}`);
+}

@@ -33,6 +33,8 @@ const TEAM_EVENTS_CHANNEL = "norv_team_events";
 const reconnectDelayMs = 5_000;
 const entitlementCheckIntervalMs = 15_000;
 let pubSubClient: PoolClient | null = null;
+
+let releasePubSubClient: (() => void) | null = null;
 let pubSubConnectPromise: Promise<void> | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
 let realtimeClosed = false;
@@ -192,6 +194,13 @@ async function connectPubSub() {
       client = await pool.connect() as PoolClient;
       await client.query(`LISTEN ${TEAM_EVENTS_CHANNEL}`);
       pubSubClient = client;
+      let clientReleased = false;
+      const releaseClient = () => {
+        if (clientReleased) return;
+        clientReleased = true;
+        client?.release(true);
+      };
+      releasePubSubClient = releaseClient;
       client.on("notification", (notification: { channel?: string; payload?: string }) => {
         if (notification.channel === TEAM_EVENTS_CHANNEL && notification.payload) {
           void handlePubSubNotification(notification.payload);
@@ -202,7 +211,8 @@ async function connectPubSub() {
         if (disconnected) return;
         disconnected = true;
         if (pubSubClient === client) pubSubClient = null;
-        client?.release(true);
+        if (releasePubSubClient === releaseClient) releasePubSubClient = null;
+        releaseClient();
         if (error) logger.error({ err: error }, "Team realtime pub/sub connection lost");
         else logger.warn("Team realtime pub/sub connection ended");
         schedulePubSubReconnect();
@@ -383,7 +393,9 @@ export function attachTeamRealtime(server: Server) {
     realtimeClosed = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = null;
-    pubSubClient?.release(true);
+    const releaseClient = releasePubSubClient;
+    releasePubSubClient = null;
     pubSubClient = null;
+    releaseClient?.();
   });
 }
