@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { BrainCircuit, CheckCircle2, Loader2, ArrowRight, MapPin, University } from "lucide-react";
+import { BrainCircuit, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -18,15 +18,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { JORDAN_GOVERNORATES, JORDANIAN_UNIVERSITIES } from "@/data/jordan";
-
 const registerSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  governorate: z.string().optional(),
-  university: z.string().optional(),
+  fullName: z.string().trim().min(2, "Enter your full name").max(80, "Full name is too long")
+    .regex(/^[\p{L}\p{M}][\p{L}\p{M}' -]*[\p{L}\p{M}]$/u, "Use letters, spaces, apostrophes, or hyphens only"),
+  username: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_]{2,29}$/, "Start with a letter; use 3-30 letters, numbers, or underscores"),
+  password: z.string().min(8, "Use at least 8 characters").max(72, "Use no more than 72 characters")
+    .regex(/[A-Z]/, "Add one uppercase letter")
+    .regex(/[a-z]/, "Add one lowercase letter")
+    .regex(/[0-9]/, "Add one number")
+    .regex(/[^A-Za-z0-9\s]/, "Add one special character")
+    .regex(/^\S+$/, "Do not use spaces"),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -43,14 +44,13 @@ export default function Register() {
       fullName: "",
       username: "",
       password: "",
-      governorate: "",
-      university: "",
     },
   });
 
   const onSubmit = (data: RegisterForm) => {
+    if (registerMutation.isPending) return;
     registerMutation.mutate(
-      { data },
+      { data: { ...data, fullName: data.fullName.trim().replace(/\s+/g, " "), username: data.username.trim() } },
       {
         onSuccess: (res) => {
           login(res.token, res.user);
@@ -137,40 +137,6 @@ export default function Register() {
                         </FormItem>
                       )}
                     />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="governorate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2"><MapPin className="size-4 text-primary" />Governorate</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Select governorate" /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                {JORDAN_GOVERNORATES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="university"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2"><University className="size-4 text-primary" />University</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Select university" /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                {JORDANIAN_UNIVERSITIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
                     <FormField
                       control={form.control}
                       name="username"
@@ -178,7 +144,7 @@ export default function Register() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input placeholder="johndoe" {...field} />
+                            <Input autoComplete="username" placeholder="johndoe" maxLength={30} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -191,12 +157,15 @@ export default function Register() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input type="password" autoComplete="new-password" placeholder="••••••••" maxLength={72} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Use 8–72 characters with uppercase and lowercase letters, a number, and a special character.
+                    </p>
                   </div>
                   
                   <Button

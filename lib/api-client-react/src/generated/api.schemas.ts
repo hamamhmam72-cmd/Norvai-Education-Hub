@@ -53,14 +53,23 @@ export interface SuccessResponse {
 }
 
 export interface RegisterInput {
-  /** @minLength 3 */
+  /**
+     * @minLength 3
+     * @maxLength 30
+     * @pattern ^[A-Za-z][A-Za-z0-9_]{2,29}$
+     */
   username: string;
-  /** @minLength 6 */
+  /**
+     * @minLength 8
+     * @maxLength 72
+     * @pattern ^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,72}$
+     */
   password: string;
-  /** @minLength 1 */
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
   fullName: string;
-  governorate?: string;
-  university?: string;
 }
 
 export interface LoginInput {
@@ -111,24 +120,12 @@ export interface AuthResponse {
   user: User;
 }
 
-export type SetupInputSkillLevel = typeof SetupInputSkillLevel[keyof typeof SetupInputSkillLevel];
-
-
-export const SetupInputSkillLevel = {
-  beginner: 'beginner',
-  intermediate: 'intermediate',
-  advanced: 'advanced',
-} as const;
-
 export interface SetupInput {
-  university?: string;
-  governorate?: string;
-  major?: string;
-  yearOfStudy?: number;
+  university: string;
+  governorate: string;
+  major: string;
+  yearOfStudy: number;
   specialization: string;
-  skillAnswers?: string[];
-  skillLevel: SetupInputSkillLevel;
-  knownLanguages?: string[];
 }
 
 export interface ProfileUpdate {
@@ -145,7 +142,11 @@ export interface ProfileUpdate {
 
 export interface ChangePasswordInput {
   currentPassword: string;
-  /** @minLength 6 */
+  /**
+     * @minLength 8
+     * @maxLength 72
+     * @pattern ^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,72}$
+     */
   newPassword: string;
 }
 

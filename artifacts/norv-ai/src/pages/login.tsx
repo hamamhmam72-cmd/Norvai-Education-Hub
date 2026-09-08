@@ -21,8 +21,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().trim().min(1, "Username is required").max(30, "Username is too long"),
+  password: z.string().min(1, "Password is required").max(72, "Password is too long"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -42,6 +42,7 @@ export default function Login() {
   });
 
   const onSubmit = (data: LoginForm) => {
+    if (loginMutation.isPending) return;
     loginMutation.mutate(
       { data },
       {
@@ -128,7 +129,7 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your username" {...field} />
+                            <Input autoComplete="username" maxLength={30} placeholder="Enter your username" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -141,7 +142,7 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input type="password" autoComplete="current-password" maxLength={72} placeholder="••••••••" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

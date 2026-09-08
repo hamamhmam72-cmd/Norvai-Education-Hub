@@ -133,7 +133,8 @@ paths:
     post:
       operationId: completeSetup
       tags: [profile]
-      summary: Complete 6-step onboarding wizard
+      summary: Complete streamlined onboarding
+      description: Collect academic details once after account creation
       requestBody:
         required: true
         content:
@@ -1081,16 +1082,17 @@ components:
         username:
           type: string
           minLength: 3
+          maxLength: 30
+          pattern: "^[A-Za-z][A-Za-z0-9_]{2,29}$"
         password:
           type: string
-          minLength: 6
+          minLength: 8
+          maxLength: 72
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\\s])\\S{8,72}$"
         fullName:
           type: string
-          minLength: 1
-        governorate:
-          type: string
-        university:
-          type: string
+          minLength: 2
+          maxLength: 80
 
     LoginInput:
       type: object
@@ -1157,7 +1159,7 @@ components:
     # Profile / Onboarding
     SetupInput:
       type: object
-      required: [specialization, skillLevel]
+      required: [university, governorate, major, yearOfStudy, specialization]
       properties:
         university:
           type: string
@@ -1169,17 +1171,6 @@ components:
           type: number
         specialization:
           type: string
-        skillAnswers:
-          type: array
-          items:
-            type: string
-        skillLevel:
-          type: string
-          enum: [beginner, intermediate, advanced]
-        knownLanguages:
-          type: array
-          items:
-            type: string
 
     ProfileUpdate:
       type: object
@@ -1213,7 +1204,9 @@ components:
           type: string
         newPassword:
           type: string
-          minLength: 6
+          minLength: 8
+          maxLength: 72
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\\s])\\S{8,72}$"
 
     # Dashboard
     DashboardStats:

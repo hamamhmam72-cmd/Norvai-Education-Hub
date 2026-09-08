@@ -5,15 +5,11 @@
  * Norv_ai – Smart IT Learning Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { SetupInputSkillLevel } from './setupInputSkillLevel';
 
 export interface SetupInput {
-  university?: string;
-  governorate?: string;
-  major?: string;
-  yearOfStudy?: number;
+  university: string;
+  governorate: string;
+  major: string;
+  yearOfStudy: number;
   specialization: string;
-  skillAnswers?: string[];
-  skillLevel: SetupInputSkillLevel;
-  knownLanguages?: string[];
 }

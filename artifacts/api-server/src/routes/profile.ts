@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
+import { isStrongPassword, PASSWORD_REQUIREMENTS } from "../lib/credentials.js";
 
 const router = Router();
 
@@ -38,19 +39,27 @@ router.post("/profile/setup", requireAuth, async (req, res) => {
     major,
     yearOfStudy,
     specialization,
-    skillLevel,
-    knownLanguages,
   } = req.body;
+  const cleanGovernorate = typeof governorate === "string" ? governorate.trim().slice(0, 100) : "";
+  const cleanUniversity = typeof university === "string" ? university.trim().slice(0, 180) : "";
+  const cleanMajor = typeof major === "string" ? major.trim().slice(0, 120) : "";
+  const cleanSpecialization = typeof specialization === "string" ? specialization.trim().slice(0, 120) : "";
+  const cleanYear = Number(yearOfStudy);
+  if (!cleanGovernorate || !cleanUniversity || !cleanMajor || !cleanSpecialization
+    || !Number.isInteger(cleanYear) || cleanYear < 1 || cleanYear > 6) {
+    res.status(400).json({ error: "Complete all academic fields with valid values." });
+    return;
+  }
   const [user] = await db
     .update(usersTable)
     .set({
-      university,
-      governorate,
-      major,
-      yearOfStudy,
-      specialization,
-      skillLevel,
-      knownLanguages: knownLanguages ?? [],
+      university: cleanUniversity,
+      governorate: cleanGovernorate,
+      major: cleanMajor,
+      yearOfStudy: cleanYear,
+      specialization: cleanSpecialization,
+      skillLevel: "beginner",
+      knownLanguages: [],
       setupComplete: true,
     })
     .where(eq(usersTable.id, req.user!.userId))
@@ -74,6 +83,10 @@ router.patch("/profile", requireAuth, async (req, res) => {
 // POST /api/profile/change-password
 router.post("/profile/change-password", requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
+  if (typeof currentPassword !== "string" || !isStrongPassword(newPassword)) {
+    res.status(400).json({ error: PASSWORD_REQUIREMENTS });
+    return;
+  }
   const [user] = await db
     .select()
     .from(usersTable)

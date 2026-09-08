@@ -64,7 +64,6 @@ export * from './quizSubmitInput';
 export * from './recentActivity';
 export * from './registerInput';
 export * from './setupInput';
-export * from './setupInputSkillLevel';
 export * from './subscriptionRejectInput';
 export * from './subscriptionRequest';
 export * from './subscriptionRequestAccountType';

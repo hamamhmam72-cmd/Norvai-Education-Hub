@@ -8,6 +8,10 @@
 
 export interface ChangePasswordInput {
   currentPassword: string;
-  /** @minLength 6 */
+  /**
+     * @minLength 8
+     * @maxLength 72
+     * @pattern ^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,72}$
+     */
   newPassword: string;
 }

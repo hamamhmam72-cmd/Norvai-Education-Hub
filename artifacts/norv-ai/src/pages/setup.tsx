@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { BrainCircuit, BookOpen, ChevronRight, CheckCircle2, ArrowRight, Loader2, MapPin, University } from "lucide-react";
-import { useCompleteSetup, SetupInputSkillLevel } from "@workspace/api-client-react";
+import { useCompleteSetup } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,38 +25,6 @@ const SPECIALIZATIONS = [
   "General IT",
 ];
 
-const LANGUAGES = [
-  "Python", "JavaScript", "Java", "C++", "C", "TypeScript", 
-  "Go", "Rust", "PHP", "Swift", "Kotlin", "SQL", "R", "MATLAB"
-];
-
-const SKILL_QUESTIONS = [
-  {
-    question: "How comfortable are you with writing code from scratch?",
-    options: [
-      { text: "I've never done it or need heavy guidance.", value: "beginner" },
-      { text: "I can write small scripts and functions.", value: "intermediate" },
-      { text: "I build complete applications regularly.", value: "advanced" },
-    ]
-  },
-  {
-    question: "What's your experience with data structures & algorithms?",
-    options: [
-      { text: "What are those?", value: "beginner" },
-      { text: "I know arrays, lists, and basic sorting.", value: "intermediate" },
-      { text: "I can optimize time/space complexity.", value: "advanced" },
-    ]
-  },
-  {
-    question: "Have you worked with external APIs or databases?",
-    options: [
-      { text: "No, mostly local logic.", value: "beginner" },
-      { text: "Yes, basic fetch/SQL queries.", value: "intermediate" },
-      { text: "Yes, I design and integrate complex systems.", value: "advanced" },
-    ]
-  }
-];
-
 export default function Setup() {
   const [step, setStep] = useState(1);
   const [, setLocation] = useLocation();
@@ -70,43 +38,27 @@ export default function Setup() {
     major: "",
     yearOfStudy: "",
     specialization: "",
-    skillAnswers: [] as string[],
-    knownLanguages: [] as string[],
   });
 
-  const progress = ((step - 1) / 5) * 100;
+  const progress = ((step - 1) / 3) * 100;
 
-  const nextStep = () => setStep((s) => Math.min(s + 1, 6));
-  
-  const calculateSkillLevel = (): SetupInputSkillLevel => {
-    let score = 0;
-    formData.skillAnswers.forEach((ans) => {
-      if (ans === "intermediate") score += 1;
-      if (ans === "advanced") score += 2;
-    });
-    if (score >= 4) return "advanced";
-    if (score >= 2) return "intermediate";
-    return "beginner";
-  };
+  const nextStep = () => setStep((s) => Math.min(s + 1, 4));
 
   const finishSetup = () => {
+    if (completeSetupMutation.isPending) return;
     const payload = {
       governorate: formData.governorate,
       university: formData.university,
       major: formData.major,
       yearOfStudy: parseInt(formData.yearOfStudy) || 1,
       specialization: formData.specialization,
-      skillLevel: calculateSkillLevel(),
-      knownLanguages: formData.knownLanguages,
     };
 
     completeSetupMutation.mutate(
       { data: payload },
       {
-        onSuccess: (data: any) => {
-          // API returns { user: {...} }; unwrap before storing
-          const actualUser = data?.user ?? data;
-          updateUser(actualUser);
+        onSuccess: (data) => {
+          updateUser(data);
           setLocation("/dashboard");
         },
         onError: (err: any) => {
@@ -129,7 +81,7 @@ export default function Setup() {
         </div>
 
         <Card className="shadow-lg shadow-black/5 overflow-hidden">
-          {step > 1 && step < 6 && (
+          {step > 1 && step < 4 && (
             <Progress value={progress} className="h-1.5 rounded-none rounded-t-lg bg-muted/50" />
           )}
           <CardContent className="p-8 md:p-12">
@@ -242,109 +194,8 @@ export default function Setup() {
               </div>
             )}
 
-            {/* Step 4: Skill Assessment */}
+            {/* Step 4: Success */}
             {step === 4 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight">Quick Assessment</h2>
-                  <p className="text-muted-foreground">Let's gauge your current skill level to personalize content.</p>
-                </div>
-                
-                <div className="space-y-8">
-                  {SKILL_QUESTIONS.map((q, i) => (
-                    <div key={i} className="space-y-3">
-                      <Label className="text-base font-semibold">{i + 1}. {q.question}</Label>
-                      <div className="space-y-2">
-                        {q.options.map((opt) => {
-                          const isSelected = formData.skillAnswers[i] === opt.value;
-                          return (
-                            <button
-                              key={opt.value}
-                              onClick={() => {
-                                const newAnswers = [...formData.skillAnswers];
-                                newAnswers[i] = opt.value;
-                                setFormData({...formData, skillAnswers: newAnswers});
-                              }}
-                              className={cn(
-                                "w-full flex items-center p-3 rounded-lg border transition-all text-left",
-                                isSelected
-                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                  : "border-border hover:bg-muted/50"
-                              )}
-                            >
-                              <div className={cn(
-                                "size-4 rounded-full border mr-3 flex-shrink-0 flex items-center justify-center",
-                                isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                              )}>
-                                {isSelected && <div className="size-1.5 bg-white rounded-full" />}
-                              </div>
-                              <span className={isSelected ? "font-medium" : ""}>{opt.text}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                  <Button size="lg" onClick={nextStep} disabled={formData.skillAnswers.filter(Boolean).length < 3}>
-                    Continue <ChevronRight className="ml-2 size-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 5: Known Languages */}
-            {step === 5 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight">Languages & Tools</h2>
-                  <p className="text-muted-foreground">Select the programming languages you already know.</p>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 pt-4">
-                  {LANGUAGES.map((lang) => {
-                    const isSelected = formData.knownLanguages.includes(lang);
-                    return (
-                      <button
-                        key={lang}
-                        onClick={() => {
-                          if (isSelected) {
-                            setFormData({
-                              ...formData, 
-                              knownLanguages: formData.knownLanguages.filter(l => l !== lang)
-                            });
-                          } else {
-                            setFormData({
-                              ...formData, 
-                              knownLanguages: [...formData.knownLanguages, lang]
-                            });
-                          }
-                        }}
-                        className={cn(
-                          "px-4 py-2 rounded-full border transition-all text-sm font-medium",
-                          isSelected 
-                            ? "bg-primary text-primary-foreground border-primary shadow-sm" 
-                            : "bg-background border-border hover:border-primary/50 hover:bg-muted text-foreground"
-                        )}
-                      >
-                        {lang}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="pt-8 flex justify-end">
-                  <Button size="lg" onClick={nextStep}>
-                    Finish Setup <ChevronRight className="ml-2 size-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 6: Success */}
-            {step === 6 && (
               <div className="text-center space-y-6 animate-in zoom-in duration-500">
                 <div className="mx-auto size-24 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
                   <CheckCircle2 className="size-12 text-green-600 dark:text-green-500" />

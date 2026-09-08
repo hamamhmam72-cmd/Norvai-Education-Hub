@@ -471,7 +471,8 @@ export const getCompleteSetupUrl = () => {
 }
 
 /**
- * @summary Complete 6-step onboarding wizard
+ * Collect academic details once after account creation
+ * @summary Complete streamlined onboarding
  */
 export const completeSetup = async (setupInput: SetupInput, options?: Parameters<typeof customFetch>[1]): Promise<User> => {
 
@@ -520,7 +521,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CompleteSetupMutationError = ErrorType<unknown>
 
     /**
- * @summary Complete 6-step onboarding wizard
+ * @summary Complete streamlined onboarding
  */
 export const useCompleteSetup = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeSetup>>, TError,{data: BodyType<SetupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

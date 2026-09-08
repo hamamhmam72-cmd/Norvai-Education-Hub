@@ -5,6 +5,14 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { signToken } from "../lib/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
+import {
+  isStrongPassword,
+  isValidFullName,
+  isValidUsername,
+  normalizeFullName,
+  normalizeUsername,
+  PASSWORD_REQUIREMENTS,
+} from "../lib/credentials.js";
 
 const router = Router();
 
@@ -33,9 +41,19 @@ function safeUser(u: typeof usersTable.$inferSelect) {
 
 // POST /api/auth/register
 router.post("/auth/register", async (req, res) => {
-  const { username, password, fullName, governorate, university } = req.body;
-  if (!username || !password || !fullName) {
-    res.status(400).json({ error: "username, password, fullName required" });
+  const username = normalizeUsername(req.body?.username);
+  const fullName = normalizeFullName(req.body?.fullName);
+  const password = req.body?.password;
+  if (!isValidFullName(fullName)) {
+    res.status(400).json({ error: "Full name must be 2-80 letters and may contain spaces, apostrophes, or hyphens." });
+    return;
+  }
+  if (!isValidUsername(username)) {
+    res.status(400).json({ error: "Username must start with a letter and contain 3-30 letters, numbers, or underscores." });
+    return;
+  }
+  if (!isStrongPassword(password)) {
+    res.status(400).json({ error: PASSWORD_REQUIREMENTS });
     return;
   }
   const existing = await db
@@ -50,7 +68,7 @@ router.post("/auth/register", async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 12);
   const [user] = await db
     .insert(usersTable)
-    .values({ username, fullName, passwordHash, governorate, university })
+    .values({ username, fullName, passwordHash })
     .returning();
   const token = signToken({ userId: user.id, username: user.username, role: user.role });
   res.status(201).json({ token, user: safeUser(user) });
@@ -58,8 +76,9 @@ router.post("/auth/register", async (req, res) => {
 
 // POST /api/auth/login
 router.post("/auth/login", async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
+  const username = normalizeUsername(req.body?.username);
+  const password = req.body?.password;
+  if (!username || typeof password !== "string" || password.length > 72) {
     res.status(400).json({ error: "username and password required" });
     return;
   }

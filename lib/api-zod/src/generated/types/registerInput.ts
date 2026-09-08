@@ -7,12 +7,21 @@
  */
 
 export interface RegisterInput {
-  /** @minLength 3 */
+  /**
+     * @minLength 3
+     * @maxLength 30
+     * @pattern ^[A-Za-z][A-Za-z0-9_]{2,29}$
+     */
   username: string;
-  /** @minLength 6 */
+  /**
+     * @minLength 8
+     * @maxLength 72
+     * @pattern ^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,72}$
+     */
   password: string;
-  /** @minLength 1 */
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
   fullName: string;
-  governorate?: string;
-  university?: string;
 }

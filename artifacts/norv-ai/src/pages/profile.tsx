@@ -61,8 +61,13 @@ type ProfileForm = z.infer<typeof profileSchema>;
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+  newPassword: z.string().min(8, "Use at least 8 characters").max(72, "Use no more than 72 characters")
+    .regex(/[A-Z]/, "Add one uppercase letter")
+    .regex(/[a-z]/, "Add one lowercase letter")
+    .regex(/[0-9]/, "Add one number")
+    .regex(/[^A-Za-z0-9\s]/, "Add one special character")
+    .regex(/^\S+$/, "Do not use spaces"),
+  confirmPassword: z.string().min(1, "Confirm your new password"),
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -391,7 +396,7 @@ export default function Profile() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("currentPassword")}</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl><Input type="password" autoComplete="current-password" maxLength={72} {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -402,7 +407,7 @@ export default function Profile() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("newPassword")}</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl><Input type="password" autoComplete="new-password" maxLength={72} {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -413,11 +418,14 @@ export default function Profile() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("confirmPassword")}</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl><Input type="password" autoComplete="new-password" maxLength={72} {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Use 8–72 characters with uppercase and lowercase letters, a number, and a special character.
+                  </p>
                 </form>
               </Form>
             </CardContent>

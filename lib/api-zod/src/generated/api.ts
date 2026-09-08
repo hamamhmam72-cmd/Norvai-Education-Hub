@@ -35,18 +35,24 @@ export const HealthCheckResponse = zod.object({
  * @summary Create a new account
  */
 export const registerBodyUsernameMin = 3;
+export const registerBodyUsernameMax = 30;
 
-export const registerBodyPasswordMin = 6;
 
+export const registerBodyUsernameRegExp = new RegExp('^[A-Za-z][A-Za-z0-9_]{2,29}$');
+export const registerBodyPasswordMin = 8;
+export const registerBodyPasswordMax = 72;
+
+
+export const registerBodyPasswordRegExp = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\\s])\\S{8,72}$');
+export const registerBodyFullNameMin = 2;
+export const registerBodyFullNameMax = 80;
 
 
 
 export const RegisterBody = zod.object({
-  "username": zod.string().min(registerBodyUsernameMin),
-  "password": zod.string().min(registerBodyPasswordMin),
-  "fullName": zod.string().min(1),
-  "governorate": zod.string().optional(),
-  "university": zod.string().optional()
+  "username": zod.string().min(registerBodyUsernameMin).max(registerBodyUsernameMax).regex(registerBodyUsernameRegExp),
+  "password": zod.string().min(registerBodyPasswordMin).max(registerBodyPasswordMax).regex(registerBodyPasswordRegExp),
+  "fullName": zod.string().min(registerBodyFullNameMin).max(registerBodyFullNameMax)
 })
 
 export const RegisterResponse = zod.object({
@@ -141,17 +147,15 @@ export const GetMeResponse = zod.object({
 
 
 /**
- * @summary Complete 6-step onboarding wizard
+ * Collect academic details once after account creation
+ * @summary Complete streamlined onboarding
  */
 export const CompleteSetupBody = zod.object({
-  "university": zod.string().optional(),
-  "governorate": zod.string().optional(),
-  "major": zod.string().optional(),
-  "yearOfStudy": zod.number().optional(),
-  "specialization": zod.string(),
-  "skillAnswers": zod.array(zod.string()).optional(),
-  "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced']),
-  "knownLanguages": zod.array(zod.string()).optional()
+  "university": zod.string(),
+  "governorate": zod.string(),
+  "major": zod.string(),
+  "yearOfStudy": zod.number(),
+  "specialization": zod.string()
 })
 
 export const CompleteSetupResponse = zod.object({
@@ -216,13 +220,16 @@ export const UpdateProfileResponse = zod.object({
 /**
  * @summary Change account password
  */
-export const changePasswordBodyNewPasswordMin = 6;
+export const changePasswordBodyNewPasswordMin = 8;
+export const changePasswordBodyNewPasswordMax = 72;
 
+
+export const changePasswordBodyNewPasswordRegExp = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\\s])\\S{8,72}$');
 
 
 export const ChangePasswordBody = zod.object({
   "currentPassword": zod.string(),
-  "newPassword": zod.string().min(changePasswordBodyNewPasswordMin)
+  "newPassword": zod.string().min(changePasswordBodyNewPasswordMin).max(changePasswordBodyNewPasswordMax).regex(changePasswordBodyNewPasswordRegExp)
 })
 
 export const ChangePasswordResponse = zod.object({
