@@ -12,3 +12,4 @@ export * from "./certificates";
 export * from "./feedback";
 export * from "./study-resources";
 export * from "./academic-resources";
+export * from "./team-rate-limits";

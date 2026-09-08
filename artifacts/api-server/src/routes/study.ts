@@ -20,6 +20,10 @@ import { requireAuth } from "../middleware/auth.js";
 import { openai } from "../lib/openai.js";
 import { broadcastTeamEvent } from "../lib/team-realtime.js";
 import { saveTeamCodeWithVersion } from "../lib/team-collaboration.js";
+import {
+  allowTeamMessage,
+  TeamMessageRateLimitUnavailableError,
+} from "../lib/team-message-rate-limit.js";
 
 const router = Router();
 const allowedMaterialTypes = new Set([
@@ -144,7 +148,6 @@ const textField = (value: unknown, max: number) =>
   typeof value === "string" && value.trim().length > 0 && value.trim().length <= max
     ? value.trim()
     : null;
-const teamMessageUsage = new Map<number, { count: number; resetAt: number }>();
 
 async function getTeamMembership(userId: number, projectId: number) {
   const [user] = await db.select({
@@ -156,18 +159,6 @@ async function getTeamMembership(userId: number, projectId: number) {
   const [membership] = await db.select().from(teamProjectMembersTable)
     .where(and(eq(teamProjectMembersTable.projectId, projectId), eq(teamProjectMembersTable.userId, userId))).limit(1);
   return user.role === "admin" ? { role: "owner" } : membership ?? null;
-}
-
-function allowTeamMessage(userId: number) {
-  const now = Date.now();
-  const current = teamMessageUsage.get(userId);
-  if (!current || current.resetAt <= now) {
-    teamMessageUsage.set(userId, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  if (current.count >= 30) return false;
-  current.count += 1;
-  return true;
 }
 
 router.get("/study/productivity", requireAuth, async (req, res): Promise<void> => {
@@ -525,7 +516,18 @@ router.post("/team/projects/:id/messages", requireAuth, async (req, res): Promis
   const projectId = Number(req.params.id);
   const membership = Number.isInteger(projectId) ? await getTeamMembership(req.user!.userId, projectId) : null;
   if (!membership) { res.status(403).json({ error: "An active Team plan and project membership are required" }); return; }
-  if (!allowTeamMessage(req.user!.userId)) {
+  let messageAllowed: boolean;
+  try {
+    messageAllowed = await allowTeamMessage(req.user!.userId);
+  } catch (error) {
+    if (error instanceof TeamMessageRateLimitUnavailableError) {
+      req.log?.error?.({ err: error, userId: req.user!.userId }, "Team message rate-limit store unavailable");
+      res.status(503).json({ error: "Message limits are temporarily unavailable. Try again shortly." });
+      return;
+    }
+    throw error;
+  }
+  if (!messageAllowed) {
     res.setHeader("Retry-After", "60");
     res.status(429).json({ error: "Message limit reached. Try again shortly." });
     return;
