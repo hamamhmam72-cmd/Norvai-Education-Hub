@@ -159,7 +159,7 @@ export default function Login() {
                     ) : (
                       <>
                         Sign In
-                        <ArrowRight className="ml-2 size-5 transition-transform group-hover:translate-x-1" />
+                        <ArrowRight className="ms-2 size-5 transition-transform rtl:rotate-180 group-hover:translate-x-1" />
                       </>
                     )}
                   </Button>
