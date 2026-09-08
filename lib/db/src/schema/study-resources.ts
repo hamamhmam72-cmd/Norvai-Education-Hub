@@ -32,6 +32,17 @@ export const teamSnippetsTable = pgTable("team_snippets", {
   code: text("code").notNull(),
   review: text("review").notNull(),
   visibility: text("visibility").notNull().default("team"),
+  projectId: integer("project_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const teamMessagesTable = pgTable("team_messages", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  userId: integer("user_id").notNull(),
+  content: text("content"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -52,6 +63,7 @@ export const interviewSessionsTable = pgTable("interview_sessions", {
 export const insertStudySessionSchema = createInsertSchema(studySessionsTable).omit({ id: true, createdAt: true });
 export const insertQuestionBankItemSchema = createInsertSchema(questionBankItemsTable).omit({ id: true, createdAt: true });
 export const insertTeamSnippetSchema = createInsertSchema(teamSnippetsTable).omit({ id: true, createdAt: true });
+export const insertTeamMessageSchema = createInsertSchema(teamMessagesTable).omit({ id: true, createdAt: true });
 export const insertInterviewSessionSchema = createInsertSchema(interviewSessionsTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type StudySession = z.infer<typeof insertStudySessionSchema>;

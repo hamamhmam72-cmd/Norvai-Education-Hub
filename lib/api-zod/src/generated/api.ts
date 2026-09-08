@@ -928,6 +928,7 @@ export const GetSubscriptionStatusResponse = zod.object({
  */
 export const RequestSubscriptionBody = zod.object({
   "plan": zod.enum(['3months', '6months', '1year']),
+  "accountType": zod.enum(['individual', 'team']),
   "receiptUrl": zod.string(),
   "transferReference": zod.string(),
   "senderName": zod.string()
@@ -939,6 +940,7 @@ export const RequestSubscriptionResponse = zod.object({
   "username": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "plan": zod.string(),
+  "accountType": zod.enum(['individual', 'team']).optional(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
   "provider": zod.string().optional(),
@@ -964,6 +966,7 @@ export const GetSubscriptionRequestsResponseItem = zod.object({
   "username": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "plan": zod.string(),
+  "accountType": zod.enum(['individual', 'team']).optional(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
   "provider": zod.string().optional(),
@@ -990,6 +993,7 @@ export const ApproveSubscriptionResponse = zod.object({
   "username": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "plan": zod.string(),
+  "accountType": zod.enum(['individual', 'team']).optional(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
   "provider": zod.string().optional(),
@@ -1019,6 +1023,7 @@ export const RejectSubscriptionResponse = zod.object({
   "username": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "plan": zod.string(),
+  "accountType": zod.enum(['individual', 'team']).optional(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
   "receiptUrl": zod.string(),
   "provider": zod.string().optional(),

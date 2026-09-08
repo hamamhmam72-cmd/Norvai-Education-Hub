@@ -1,3 +1,5 @@
 - [Norv_ai Stack & Architecture](norv-ai-architecture.md) — JWT auth, Drizzle ORM, Gemini AI, full API + frontend built
 - [Orval Zod Codegen](orval-zod-compat.md) — type:integer → type:number fix for Zod v3 compat
 - [Gemini Integration Build](gemini-build.md) — @google/* must NOT be in esbuild externals; bundle it
+- [CliQ verification boundary](cliq-verification.md) — receipts stay pending; only a signed settled webhook can auto-activate access
+- [Team entitlement boundary](team-entitlements.md) — collaborative projects, chat, images, and shared code require an active Team tier plus project membership

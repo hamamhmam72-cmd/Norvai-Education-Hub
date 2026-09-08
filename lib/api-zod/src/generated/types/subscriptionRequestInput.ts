@@ -5,10 +5,12 @@
  * Norv_ai – Smart IT Learning Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { SubscriptionRequestInputAccountType } from './subscriptionRequestInputAccountType';
 import type { SubscriptionRequestInputPlan } from './subscriptionRequestInputPlan';
 
 export interface SubscriptionRequestInput {
   plan: SubscriptionRequestInputPlan;
+  accountType: SubscriptionRequestInputAccountType;
   receiptUrl: string;
   transferReference: string;
   senderName: string;

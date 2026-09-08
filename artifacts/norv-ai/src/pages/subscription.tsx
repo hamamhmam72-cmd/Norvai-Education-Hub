@@ -8,6 +8,7 @@ import { useLang } from "@/context/LanguageContext";
 import {
   CreditCard, CheckCircle2, Clock, ShieldCheck,
   Upload, Sparkles, AlertCircle, Loader2, ArrowRight, ImageIcon, X,
+  User, Users, MessageCircle, Code2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,9 +22,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const PLANS = [
-  { id: "3months", name: "3 Months", price: "10 JOD", desc: "Perfect for a single semester.", popular: false },
-  { id: "6months", name: "6 Months", price: "19 JOD", desc: "Covers a full academic year.", popular: true },
-  { id: "1year", name: "1 Year", price: "55 JOD", desc: "Best value for dedicated students.", popular: false },
+  { id: "3months", name: "3 Months", price: 10, desc: "Perfect for a single semester.", popular: false },
+  { id: "6months", name: "6 Months", price: 19, desc: "Covers two academic semesters.", popular: true },
+  { id: "1year", name: "1 Year", price: 36, desc: "Best annual value for dedicated students.", popular: false },
 ] as const;
 
 export default function Subscription() {
@@ -35,6 +36,7 @@ export default function Subscription() {
   const requestSubscription = useRequestSubscription();
 
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionRequestInputPlan>("6months");
+  const [accountType, setAccountType] = useState<"individual" | "team">("individual");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [transferReference, setTransferReference] = useState("");
   const [senderName, setSenderName] = useState("");
@@ -42,6 +44,7 @@ export default function Subscription() {
   const [imageUploading, setImageUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedAmount = (PLANS.find((plan) => plan.id === selectedPlan)?.price ?? 0) * (accountType === "team" ? 2 : 1);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,7 +87,7 @@ export default function Subscription() {
       return;
     }
     requestSubscription.mutate(
-      { data: { plan: selectedPlan, receiptUrl, transferReference, senderName } },
+      { data: { plan: selectedPlan, accountType, receiptUrl, transferReference, senderName } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetSubscriptionStatusQueryKey() });
@@ -167,6 +170,15 @@ export default function Subscription() {
         </Card>
       ) : (
         <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <button type="button" onClick={() => setAccountType("individual")} className={cn("rounded-2xl border-2 p-5 text-start transition-all", accountType === "individual" ? "border-primary bg-primary/5" : "border-border/60")}>
+              <div className="flex items-center gap-3"><User className="size-6 text-primary" /><div><div className="font-bold">Individual plan</div><div className="text-sm text-muted-foreground">Personal access with the base prices.</div></div></div>
+            </button>
+            <button type="button" onClick={() => setAccountType("team")} className={cn("rounded-2xl border-2 p-5 text-start transition-all", accountType === "team" ? "border-primary bg-primary/5" : "border-border/60")}>
+              <div className="flex items-center gap-3"><Users className="size-6 text-primary" /><div><div className="font-bold">Team plan</div><div className="text-sm text-muted-foreground">Double price with collaborative workspace.</div></div></div>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground"><span className="flex items-center gap-1"><MessageCircle className="size-3" />Group chat & images</span><span className="flex items-center gap-1"><Code2 className="size-3" />Shared code & projects</span></div>
+            </button>
+          </div>
           {/* Plan Cards */}
           <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map((plan) => (
@@ -188,7 +200,7 @@ export default function Subscription() {
                 <CardContent className={cn("text-center p-6", plan.popular ? "pt-8" : "")}>
                   <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
                   <p className="text-sm text-muted-foreground mb-4">{plan.desc}</p>
-                  <div className="text-3xl font-extrabold mb-1">{plan.price}</div>
+                  <div className="text-3xl font-extrabold mb-1">JOD {plan.price * (accountType === "team" ? 2 : 1)}</div>
                   <div className="text-sm text-muted-foreground">one-time payment</div>
                   {selectedPlan === plan.id && (
                     <div className="mt-4 flex justify-center">
@@ -215,7 +227,7 @@ export default function Subscription() {
                 <ol className="space-y-4">
                   <li className="flex gap-3 items-start">
                     <div className="size-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0">1</div>
-                    <span>Transfer the exact amount for your selected plan via CliQ.</span>
+                    <span>Transfer exactly <strong>JOD {selectedAmount}</strong> for the selected {accountType} plan via CliQ.</span>
                   </li>
                   <li className="flex gap-3 items-start">
                     <div className="size-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0">2</div>

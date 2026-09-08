@@ -5,6 +5,7 @@
  * Norv_ai – Smart IT Learning Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { SubscriptionRequestAccountType } from './subscriptionRequestAccountType';
 import type { SubscriptionRequestStatus } from './subscriptionRequestStatus';
 
 export interface SubscriptionRequest {
@@ -15,6 +16,7 @@ export interface SubscriptionRequest {
   /** @nullable */
   fullName?: string | null;
   plan: string;
+  accountType?: SubscriptionRequestAccountType;
   status: SubscriptionRequestStatus;
   receiptUrl: string;
   provider?: string;

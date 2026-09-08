@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Redirect } from "wouter";
 import { 
@@ -55,6 +55,7 @@ export default function AdminPanel() {
           <TabsTrigger value="dashboard" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">Overview</TabsTrigger>
           <TabsTrigger value="subscriptions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">Subscriptions</TabsTrigger>
           <TabsTrigger value="users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">Users</TabsTrigger>
+          <TabsTrigger value="academic" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">Academic review</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-0">
@@ -66,9 +67,30 @@ export default function AdminPanel() {
         <TabsContent value="users" className="mt-0">
           <AdminUsersTab />
         </TabsContent>
+        <TabsContent value="academic" className="mt-0">
+          <AdminAcademicTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function AdminAcademicTab() {
+  const { toast } = useToast();
+  const [resources, setResources] = useState<any[]>([]);
+  useEffect(() => { fetch("/api/admin/academic-resources", { headers: { Authorization: `Bearer ${localStorage.getItem("norv_token")}` } }).then((response) => response.json()).then(setResources).catch(() => undefined); }, []);
+  const publish = async (id: number, isPublished: boolean) => {
+    const response = await fetch(`/api/admin/academic-resources/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("norv_token")}` },
+      body: JSON.stringify({ isPublished }),
+    });
+    if (!response.ok) { toast({ variant: "destructive", description: "Could not update resource" }); return; }
+    const updated = await response.json();
+    setResources((items) => items.map((item) => item.id === id ? updated : item));
+    toast({ title: isPublished ? "Resource published" : "Resource unpublished" });
+  };
+  return <Card><CardHeader><CardTitle>Academic resources moderation</CardTitle><CardDescription>Verify professor identity, source URL, and research quality before publishing.</CardDescription></CardHeader><CardContent className="space-y-3">{resources.length ? resources.map((resource) => <div key={resource.id} className="flex flex-col gap-3 rounded-xl border p-4 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Badge variant={resource.isPublished ? "default" : "secondary"}>{resource.isPublished ? "Published" : "Pending"}</Badge><span className="text-xs text-muted-foreground">{resource.type}</span></div><h3 className="mt-1 font-semibold">{resource.title}</h3><p className="text-sm text-muted-foreground">{resource.professorName || "Unknown professor"} · {resource.professorUniversity || "University not supplied"} · {resource.subject}</p></div><Button variant={resource.isPublished ? "outline" : "default"} onClick={() => publish(resource.id, !resource.isPublished)}>{resource.isPublished ? "Unpublish" : "Publish"}</Button></div>) : <p className="text-sm text-muted-foreground">No submitted academic resources.</p>}</CardContent></Card>;
 }
 
 function AdminDashboardTab() {
@@ -166,7 +188,7 @@ function AdminSubscriptionsTab() {
                   <td className="px-6 py-4 font-medium">
                     {req.fullName} <span className="text-xs text-muted-foreground block">@{req.username}</span>
                   </td>
-                  <td className="px-6 py-4 capitalize">{req.plan?.replace("months", " Months") ?? "-"}</td>
+                  <td className="px-6 py-4 capitalize">{req.plan?.replace("months", " Months") ?? "-"}<span className="block text-xs text-muted-foreground">{(req as SubscriptionRequest & { accountType?: string }).accountType || "individual"}</span></td>
                   <td className="px-6 py-4">
                     <div className="font-medium">{req.senderName || "Unknown sender"}</div>
                     <div className="font-mono text-xs text-muted-foreground">{req.transferReference || "No reference"}</div>

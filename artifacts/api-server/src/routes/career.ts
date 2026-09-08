@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, quizAttemptsTable, interviewSessionsTable } from "@workspace/db/schema";
+import { usersTable, quizAttemptsTable, interviewSessionsTable, linkedinProfilesTable } from "@workspace/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { openai } from "../lib/openai.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -11,6 +11,32 @@ type InterviewMessage = { role: "interviewer" | "candidate"; content: string };
 function cleanText(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+
+router.get("/career/linkedin-profile", requireAuth, async (req, res) => {
+  const [profile] = await db.select().from(linkedinProfilesTable)
+    .where(eq(linkedinProfilesTable.userId, req.user!.userId)).limit(1);
+  res.json(profile ?? null);
+});
+
+router.put("/career/linkedin-profile", requireAuth, async (req, res) => {
+  const profileUrl = cleanText(req.body.profileUrl, 300);
+  if (!/^https:\/\/(www\.)?linkedin\.com\/in\/[A-Za-z0-9-_%]+\/?$/i.test(profileUrl)) {
+    res.status(400).json({ error: "Use a valid public LinkedIn profile URL" });
+    return;
+  }
+  const headline = cleanText(req.body.headline, 160) || null;
+  const summary = cleanText(req.body.summary, 2000) || null;
+  const skills = Array.isArray(req.body.skills)
+    ? req.body.skills.map((value: unknown) => cleanText(value, 60)).filter(Boolean).slice(0, 30)
+    : [];
+  const [profile] = await db.insert(linkedinProfilesTable)
+    .values({ userId: req.user!.userId, profileUrl, headline, summary, skills })
+    .onConflictDoUpdate({
+      target: linkedinProfilesTable.userId,
+      set: { profileUrl, headline, summary, skills, updatedAt: new Date() },
+    }).returning();
+  res.json(profile);
+});
 
 async function generateInterviewTurn(input: {
   role: string;

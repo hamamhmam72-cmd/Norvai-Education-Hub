@@ -28,6 +28,7 @@ export const usersTable = pgTable("users", {
   /** Set when a free activation code is used; access revoked when this timestamp passes. */
   trialExpiresAt: timestamp("trial_expires_at", { withTimezone: true }),
   subscriptionActive: boolean("subscription_active").notNull().default(false),
+  subscriptionTier: text("subscription_tier").notNull().default("individual"),
   subscriptionExpiry: timestamp("subscription_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

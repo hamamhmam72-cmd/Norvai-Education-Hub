@@ -12,6 +12,7 @@ export const subscriptionRequestsTable = pgTable("subscription_requests", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   plan: text("plan").notNull(), // "3months" | "6months" | "1year"
+  accountType: text("account_type").notNull().default("individual"), // individual | team
   status: text("status").notNull().default("pending"), // "pending" | "approved" | "rejected"
   receiptUrl: text("receipt_url").notNull(),
   provider: text("provider").notNull().default("cliq"),

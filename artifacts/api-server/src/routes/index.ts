@@ -18,6 +18,7 @@ import certificatesRouter from "./certificates.js";
 import feedbackRouter from "./feedback.js";
 import accessRouter from "./access.js";
 import studyRouter from "./study.js";
+import storageRouter from "./storage.js";
 
 import { requireActiveAccess } from "../middleware/auth.js";
 
@@ -32,6 +33,7 @@ router.use(
 );
 
 router.use(healthRouter);
+router.use(storageRouter);
 router.use(authRouter);
 router.use(profileRouter);
 router.use(dashboardRouter);

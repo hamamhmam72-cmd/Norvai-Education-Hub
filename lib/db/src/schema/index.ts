@@ -10,3 +10,4 @@ export * from "./messages";
 export * from "./certificates";
 export * from "./feedback";
 export * from "./study-resources";
+export * from "./academic-resources";

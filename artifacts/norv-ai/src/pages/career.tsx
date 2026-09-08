@@ -1,5 +1,5 @@
 import { useGetCareerRecommendations } from "@workspace/api-client-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Compass, Briefcase, GraduationCap, Code2, AlertCircle, 
@@ -62,6 +62,7 @@ export default function CareerAdvisor() {
       </div>
 
       <MockInterview />
+      <LinkedInProfileCard />
 
       {isLoading ? (
         <div className="space-y-8">
@@ -364,4 +365,25 @@ function MockInterview() {
       </CardContent>
     </Card>
   );
+}
+
+function LinkedInProfileCard() {
+  const { toast } = useToast();
+  const [profileUrl, setProfileUrl] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [summary, setSummary] = useState("");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    apiFetch<any>("/career/linkedin-profile").then((profile) => {
+      if (profile) { setProfileUrl(profile.profileUrl || ""); setHeadline(profile.headline || ""); setSummary(profile.summary || ""); }
+    }).catch(() => undefined);
+  }, []);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await apiFetch("/career/linkedin-profile", { method: "PUT", body: JSON.stringify({ profileUrl, headline, summary }) });
+      toast({ title: "LinkedIn profile connected", description: "Monk can use the profile context for career practice." });
+    } catch (error: any) { toast({ variant: "destructive", description: error.message }); } finally { setSaving(false); }
+  };
+  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Briefcase className="size-5 text-primary" />LinkedIn career context</CardTitle><CardDescription>Connect a public profile URL and optional headline so Monk can tailor interview practice. Norv does not ask for your LinkedIn password.</CardDescription></CardHeader><CardContent className="grid gap-3 md:grid-cols-2"><Input value={profileUrl} onChange={(e) => setProfileUrl(e.target.value.slice(0, 300))} placeholder="https://www.linkedin.com/in/your-name" /><Input value={headline} onChange={(e) => setHeadline(e.target.value.slice(0, 160))} placeholder="Professional headline" /><Textarea value={summary} onChange={(e) => setSummary(e.target.value.slice(0, 2000))} placeholder="Optional About section summary" className="md:col-span-2" /><div className="flex flex-wrap gap-2 md:col-span-2"><Button onClick={save} disabled={saving || !profileUrl.trim()}>{saving ? <Loader2 className="size-4 animate-spin" /> : "Save LinkedIn context"}</Button><Button variant="outline" asChild><a href={profileUrl || "https://www.linkedin.com"} target="_blank" rel="noreferrer">Open LinkedIn</a></Button></div></CardContent></Card>;
 }

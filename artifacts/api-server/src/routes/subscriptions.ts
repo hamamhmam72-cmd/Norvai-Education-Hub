@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { db } from "@workspace/db";
 import { subscriptionRequestsTable, usersTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -14,8 +15,10 @@ const PLAN_DURATION_MONTHS: Record<string, number> = {
 const PLAN_AMOUNT_FILS: Record<string, number> = {
   "3months": 10_000,
   "6months": 19_000,
-  "1year": 55_000,
+  "1year": 36_000,
 };
+const planAmount = (plan: string, accountType: string) =>
+  (PLAN_AMOUNT_FILS[plan] ?? 0) * (accountType === "team" ? 2 : 1);
 
 // GET /api/subscriptions/status
 router.get("/subscriptions/status", requireAuth, async (req, res) => {
@@ -44,6 +47,7 @@ router.get("/subscriptions/status", requireAuth, async (req, res) => {
   res.json({
     active: user.subscriptionActive,
     plan: approved?.plan ?? null,
+    accountType: approved?.accountType ?? user.subscriptionTier,
     expiryDate: user.subscriptionExpiry?.toISOString() ?? null,
     pendingRequest: Boolean(pending),
     pendingRequestDate: pending?.createdAt.toISOString() ?? null,
@@ -56,6 +60,7 @@ router.get("/subscriptions/status", requireAuth, async (req, res) => {
 router.post("/subscriptions/request", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
   const plan = typeof req.body.plan === "string" ? req.body.plan : "";
+  const accountType = req.body.accountType === "team" ? "team" : req.body.accountType === "individual" ? "individual" : "";
   const receiptUrl = typeof req.body.receiptUrl === "string" ? req.body.receiptUrl.trim() : "";
   const transferReference = typeof req.body.transferReference === "string"
     ? req.body.transferReference.trim().toUpperCase().slice(0, 80)
@@ -63,8 +68,8 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
   const senderName = typeof req.body.senderName === "string"
     ? req.body.senderName.trim().slice(0, 120)
     : "";
-  if (!plan || !receiptUrl || !transferReference || !senderName) {
-    res.status(400).json({ error: "plan, receipt, sender name, and CliQ reference are required" });
+  if (!plan || !accountType || !receiptUrl || !transferReference || !senderName) {
+    res.status(400).json({ error: "plan, account type, receipt, sender name, and CliQ reference are required" });
     return;
   }
   const validPlans = ["3months", "6months", "1year"];
@@ -96,11 +101,12 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
     .values({
       userId: uid,
       plan,
+      accountType,
       receiptUrl,
       provider: "cliq",
       transferReference,
       senderName,
-      amountFils: PLAN_AMOUNT_FILS[plan],
+      amountFils: planAmount(plan, accountType),
       status: "pending",
     })
     .returning();
@@ -108,6 +114,7 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
   res.status(201).json({
     id: request.id,
     plan: request.plan,
+    accountType: request.accountType,
     status: request.status,
     receiptUrl: request.receiptUrl,
     provider: request.provider,
@@ -116,6 +123,54 @@ router.post("/subscriptions/request", requireAuth, async (req, res) => {
     amountFils: request.amountFils,
     createdAt: request.createdAt.toISOString(),
   });
+});
+
+/**
+ * Adapter for an official bank/CliQ settlement webhook.
+ * It intentionally does nothing until a provider secret is configured.
+ * A receipt image alone never reaches this path and cannot activate access.
+ */
+router.post("/subscriptions/cliq/webhook", async (req, res) => {
+  const configuredSecret = process.env.CLIQ_WEBHOOK_SECRET;
+  const providedSecret = typeof req.headers["x-cliq-webhook-secret"] === "string"
+    ? req.headers["x-cliq-webhook-secret"]
+    : "";
+  if (!configuredSecret) {
+    res.status(503).json({ error: "CliQ settlement webhook is not configured" });
+    return;
+  }
+  const expected = Buffer.from(configuredSecret);
+  const received = Buffer.from(providedSecret);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    res.status(401).json({ error: "Invalid webhook signature" });
+    return;
+  }
+  const reference = typeof req.body?.reference === "string" ? req.body.reference.trim().toUpperCase().slice(0, 80) : "";
+  const status = typeof req.body?.status === "string" ? req.body.status.toLowerCase() : "";
+  const amountFils = Number(req.body?.amountFils);
+  if (!reference || status !== "settled" || !Number.isInteger(amountFils) || amountFils < 1) {
+    res.status(400).json({ error: "reference, settled status, and amountFils are required" });
+    return;
+  }
+  const [request] = await db.select().from(subscriptionRequestsTable)
+    .where(and(
+      eq(subscriptionRequestsTable.provider, "cliq"),
+      eq(subscriptionRequestsTable.transferReference, reference),
+      eq(subscriptionRequestsTable.status, "pending"),
+    )).limit(1);
+  if (!request) {
+    res.status(404).json({ error: "Pending CliQ request not found" });
+    return;
+  }
+  if (request.amountFils !== amountFils) {
+    res.status(409).json({ error: "Settlement amount does not match the selected plan" });
+    return;
+  }
+  const expiry = new Date();
+  expiry.setMonth(expiry.getMonth() + (PLAN_DURATION_MONTHS[request.plan] ?? 3));
+  await db.update(subscriptionRequestsTable).set({ status: "approved" }).where(eq(subscriptionRequestsTable.id, request.id));
+  await db.update(usersTable).set({ subscriptionActive: true, subscriptionTier: request.accountType, subscriptionExpiry: expiry }).where(eq(usersTable.id, request.userId));
+  res.json({ id: request.id, status: "approved" });
 });
 
 // GET /api/subscriptions (admin)
@@ -130,6 +185,7 @@ router.get("/subscriptions", requireAdmin, async (req, res) => {
       id: r.id,
       userId: r.userId,
       plan: r.plan,
+      accountType: r.accountType,
       status: r.status,
       receiptUrl: r.receiptUrl,
       provider: r.provider,
@@ -170,7 +226,7 @@ router.post(
 
     await db
       .update(usersTable)
-      .set({ subscriptionActive: true, subscriptionExpiry: expiry })
+      .set({ subscriptionActive: true, subscriptionTier: request.accountType, subscriptionExpiry: expiry })
       .where(eq(usersTable.id, request.userId));
 
     res.json({ id, status: "approved" });

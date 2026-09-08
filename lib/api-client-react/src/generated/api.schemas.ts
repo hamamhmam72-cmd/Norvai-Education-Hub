@@ -443,12 +443,29 @@ export const SubscriptionRequestInputPlan = {
   '1year': '1year',
 } as const;
 
+export type SubscriptionRequestInputAccountType = typeof SubscriptionRequestInputAccountType[keyof typeof SubscriptionRequestInputAccountType];
+
+
+export const SubscriptionRequestInputAccountType = {
+  individual: 'individual',
+  team: 'team',
+} as const;
+
 export interface SubscriptionRequestInput {
   plan: SubscriptionRequestInputPlan;
+  accountType: SubscriptionRequestInputAccountType;
   receiptUrl: string;
   transferReference: string;
   senderName: string;
 }
+
+export type SubscriptionRequestAccountType = typeof SubscriptionRequestAccountType[keyof typeof SubscriptionRequestAccountType];
+
+
+export const SubscriptionRequestAccountType = {
+  individual: 'individual',
+  team: 'team',
+} as const;
 
 export type SubscriptionRequestStatus = typeof SubscriptionRequestStatus[keyof typeof SubscriptionRequestStatus];
 
@@ -467,6 +484,7 @@ export interface SubscriptionRequest {
   /** @nullable */
   fullName?: string | null;
   plan: string;
+  accountType?: SubscriptionRequestAccountType;
   status: SubscriptionRequestStatus;
   receiptUrl: string;
   provider?: string;

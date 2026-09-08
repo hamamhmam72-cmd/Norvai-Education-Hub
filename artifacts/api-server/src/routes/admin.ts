@@ -7,11 +7,34 @@ import {
   debugSessionsTable,
   summariesTable,
   subscriptionRequestsTable,
+  academicResourcesTable,
 } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
+
+router.get("/admin/academic-resources", requireAdmin, async (_req, res) => {
+  const resources = await db.select().from(academicResourcesTable)
+    .orderBy(desc(academicResourcesTable.createdAt)).limit(200);
+  res.json(resources);
+});
+
+router.patch("/admin/academic-resources/:id", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid resource id" });
+    return;
+  }
+  const [resource] = await db.update(academicResourcesTable)
+    .set({ isPublished: Boolean(req.body?.isPublished) })
+    .where(eq(academicResourcesTable.id, id)).returning();
+  if (!resource) {
+    res.status(404).json({ error: "Resource not found" });
+    return;
+  }
+  res.json(resource);
+});
 
 // GET /api/admin/users
 router.get("/admin/users", requireAdmin, async (_req, res) => {
