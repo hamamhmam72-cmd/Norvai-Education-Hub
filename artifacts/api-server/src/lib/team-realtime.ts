@@ -1,26 +1,190 @@
 import type { Server } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";
 import { and, eq } from "drizzle-orm";
-import { db } from "@workspace/db";
-import { teamProjectMembersTable, usersTable } from "@workspace/db/schema";
+import { db, pool, type PoolClient } from "@workspace/db";
+import {
+  teamMessagesTable,
+  teamProjectMembersTable,
+  teamProjectsTable,
+  usersTable,
+} from "@workspace/db/schema";
 import { verifyToken } from "./jwt.js";
 import { logger } from "./logger.js";
 
 type TeamEvent =
-  | { type: "message.created"; projectId: number; message: unknown }
-  | { type: "code.updated"; projectId: number; code: unknown };
+  | { type: "message.created"; projectId: number; message: TeamMessagePayload }
+  | { type: "code.updated"; projectId: number; code: TeamCodePayload };
+
+type TeamMessagePayload = {
+  id: number;
+  [key: string]: unknown;
+};
+
+type TeamCodePayload = {
+  id: number;
+  [key: string]: unknown;
+};
+
+type TeamPubSubEvent =
+  | { type: "message.created"; projectId: number; messageId: number }
+  | { type: "code.updated"; projectId: number };
 
 const subscribers = new Map<number, Set<WebSocket>>();
+const TEAM_EVENTS_CHANNEL = "norv_team_events";
+const reconnectDelayMs = 5_000;
+let pubSubClient: PoolClient | null = null;
+let pubSubConnectPromise: Promise<void> | null = null;
+let reconnectTimer: NodeJS.Timeout | null = null;
+let realtimeClosed = false;
 
-export function broadcastTeamEvent(event: TeamEvent) {
+function emitToLocalSubscribers(event: TeamEvent) {
   const payload = JSON.stringify(event);
   for (const socket of subscribers.get(event.projectId) ?? []) {
     if (socket.readyState === WebSocket.OPEN) socket.send(payload);
   }
 }
 
+function toPubSubEvent(event: TeamEvent): TeamPubSubEvent {
+  if (event.type === "code.updated") {
+    return { type: event.type, projectId: event.projectId };
+  }
+  return {
+    type: event.type,
+    projectId: event.projectId,
+    messageId: event.message.id,
+  };
+}
+
+function parsePubSubEvent(payload: string): TeamPubSubEvent | null {
+  try {
+    const value: unknown = JSON.parse(payload);
+    if (!value || typeof value !== "object") return null;
+    const candidate = value as Record<string, unknown>;
+    const projectId = candidate.projectId;
+    if (typeof projectId !== "number" || !Number.isInteger(projectId) || projectId <= 0) return null;
+    if (candidate.type === "code.updated") {
+      return { type: candidate.type, projectId };
+    }
+    if (candidate.type === "message.created" && Number.isInteger(candidate.messageId)) {
+      return {
+        type: candidate.type,
+        projectId,
+        messageId: candidate.messageId as number,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function hydratePubSubEvent(event: TeamPubSubEvent): Promise<TeamEvent | null> {
+  if (event.type === "code.updated") {
+    const [project] = await db.select({
+      id: teamProjectsTable.id,
+      sharedCode: teamProjectsTable.sharedCode,
+      codeLanguage: teamProjectsTable.codeLanguage,
+      codeVersion: teamProjectsTable.codeVersion,
+      updatedAt: teamProjectsTable.updatedAt,
+    }).from(teamProjectsTable).where(eq(teamProjectsTable.id, event.projectId)).limit(1);
+    return project ? { type: event.type, projectId: event.projectId, code: project } : null;
+  }
+
+  const [message] = await db.select({
+    id: teamMessagesTable.id,
+    content: teamMessagesTable.content,
+    imageUrl: teamMessagesTable.imageUrl,
+    createdAt: teamMessagesTable.createdAt,
+    userId: teamMessagesTable.userId,
+    username: usersTable.username,
+    fullName: usersTable.fullName,
+  }).from(teamMessagesTable)
+    .innerJoin(usersTable, eq(usersTable.id, teamMessagesTable.userId))
+    .where(and(
+      eq(teamMessagesTable.id, event.messageId),
+      eq(teamMessagesTable.projectId, event.projectId),
+    )).limit(1);
+  return message ? { type: event.type, projectId: event.projectId, message } : null;
+}
+
+async function handlePubSubNotification(payload: string) {
+  const event = parsePubSubEvent(payload);
+  if (!event) {
+    logger.warn("Ignoring malformed team realtime notification");
+    return;
+  }
+  try {
+    const hydrated = await hydratePubSubEvent(event);
+    if (hydrated) emitToLocalSubscribers(hydrated);
+  } catch (error) {
+    logger.error({ err: error, projectId: event.projectId }, "Failed to hydrate team realtime notification");
+  }
+}
+
+function schedulePubSubReconnect() {
+  if (realtimeClosed || reconnectTimer || pubSubConnectPromise) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    void connectPubSub();
+  }, reconnectDelayMs);
+}
+
+async function connectPubSub() {
+  if (realtimeClosed || pubSubClient || pubSubConnectPromise) return;
+  pubSubConnectPromise = (async () => {
+    let client: PoolClient | null = null;
+    try {
+      client = await pool.connect();
+      await client.query(`LISTEN ${TEAM_EVENTS_CHANNEL}`);
+      pubSubClient = client;
+      client.on("notification", (notification) => {
+        if (notification.channel === TEAM_EVENTS_CHANNEL && notification.payload) {
+          void handlePubSubNotification(notification.payload);
+        }
+      });
+      let disconnected = false;
+      const handleDisconnect = (error?: Error) => {
+        if (disconnected) return;
+        disconnected = true;
+        if (pubSubClient === client) pubSubClient = null;
+        client?.release(true);
+        if (error) logger.error({ err: error }, "Team realtime pub/sub connection lost");
+        else logger.warn("Team realtime pub/sub connection ended");
+        schedulePubSubReconnect();
+      };
+      client.once("error", (error) => handleDisconnect(error));
+      client.once("end", () => handleDisconnect());
+      logger.info({ channel: TEAM_EVENTS_CHANNEL }, "Team realtime pub/sub connected");
+    } catch (error) {
+      client?.release(true);
+      logger.error({ err: error }, "Team realtime pub/sub connection failed");
+      schedulePubSubReconnect();
+    }
+  })().finally(() => {
+    pubSubConnectPromise = null;
+    if (!pubSubClient && !realtimeClosed) schedulePubSubReconnect();
+  });
+  await pubSubConnectPromise;
+}
+
+export function broadcastTeamEvent(event: TeamEvent) {
+  const payload = JSON.stringify(toPubSubEvent(event));
+  if (!pubSubClient) {
+    emitToLocalSubscribers(event);
+    logger.warn("Team realtime pub/sub is not ready; event was delivered locally only");
+    void connectPubSub();
+    return;
+  }
+  void pubSubClient.query("SELECT pg_notify($1, $2)", [TEAM_EVENTS_CHANNEL, payload]).catch((error: unknown) => {
+    logger.error({ err: error, projectId: event.projectId }, "Failed to publish team realtime event");
+    emitToLocalSubscribers(event);
+  });
+}
+
 export function attachTeamRealtime(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
+  realtimeClosed = false;
+  void connectPubSub();
 
   server.on("upgrade", async (request, socket, head) => {
     try {
@@ -78,4 +242,11 @@ export function attachTeamRealtime(server: Server) {
   });
 
   wss.on("error", (error) => logger.error({ err: error }, "Team realtime server error"));
+  server.once("close", () => {
+    realtimeClosed = true;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+    pubSubClient?.release(true);
+    pubSubClient = null;
+  });
 }
