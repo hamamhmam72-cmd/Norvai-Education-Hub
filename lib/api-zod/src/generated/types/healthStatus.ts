@@ -5,7 +5,10 @@
  * Norv_ai – Smart IT Learning Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { HealthStatusStatus } from './healthStatusStatus';
+import type { HealthStatusTeamRealtime } from './healthStatusTeamRealtime';
 
 export interface HealthStatus {
-  status: string;
+  status: HealthStatusStatus;
+  teamRealtime: HealthStatusTeamRealtime;
 }

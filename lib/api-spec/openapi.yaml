@@ -1029,10 +1029,35 @@ components:
   schemas:
     HealthStatus:
       type: object
-      required: [status]
+      required: [status, teamRealtime]
       properties:
         status:
           type: string
+          enum: [ok, degraded]
+        teamRealtime:
+          type: object
+          required:
+            - websocket
+            - pubSubListener
+            - reconnectAttempts
+            - publishFailures
+            - hydrationFailures
+          properties:
+            websocket:
+              type: string
+              enum: [healthy]
+            pubSubListener:
+              type: string
+              enum: [connected, disconnected]
+            reconnectAttempts:
+              type: number
+              minimum: 0
+            publishFailures:
+              type: number
+              minimum: 0
+            hydrationFailures:
+              type: number
+              minimum: 0
 
     ErrorResponse:
       type: object

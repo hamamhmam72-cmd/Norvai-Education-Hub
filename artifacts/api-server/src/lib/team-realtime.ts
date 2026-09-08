@@ -9,7 +9,11 @@ import {
   usersTable,
 } from "@workspace/db/schema";
 import { verifyToken } from "./jwt.js";
-import { logger } from "./logger.js";
+import {
+  getTeamRealtimeTelemetry,
+  logger,
+  recordTeamRealtimeTelemetry,
+} from "./logger.js";
 import { canAccessTeamProject } from "./team-collaboration.js";
 import { createTeamRealtimeHub, type TeamEvent } from "./team-realtime-hub.js";
 
@@ -30,6 +34,7 @@ let pubSubClient: PoolClient | null = null;
 let pubSubConnectPromise: Promise<void> | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
 let realtimeClosed = false;
+let pubSubConnectionAttempted = false;
 const realtimeHub = createTeamRealtimeHub();
 
 type PoolClient = {
@@ -117,6 +122,7 @@ async function handlePubSubNotification(payload: string) {
     const hydrated = await hydratePubSubEvent(event);
     if (hydrated) emitToLocalSubscribers(hydrated);
   } catch (error) {
+    recordTeamRealtimeTelemetry("hydration_failures");
     logger.error({ err: error, projectId: event.projectId }, "Failed to hydrate team realtime notification");
   }
 }
@@ -131,6 +137,10 @@ function schedulePubSubReconnect() {
 
 async function connectPubSub() {
   if (realtimeClosed || pubSubClient || pubSubConnectPromise) return;
+  if (pubSubConnectionAttempted) {
+    recordTeamRealtimeTelemetry("reconnect_attempts");
+  }
+  pubSubConnectionAttempted = true;
   pubSubConnectPromise = (async () => {
     let client: PoolClient | null = null;
     try {
@@ -171,14 +181,35 @@ export function broadcastTeamEvent(event: TeamEvent) {
   const payload = JSON.stringify(toPubSubEvent(event));
   if (!pubSubClient) {
     emitToLocalSubscribers(event);
+    recordTeamRealtimeTelemetry("publish_failures");
     logger.warn("Team realtime pub/sub is not ready; event was delivered locally only");
     void connectPubSub();
     return;
   }
   void pubSubClient.query("SELECT pg_notify($1, $2)", [TEAM_EVENTS_CHANNEL, payload]).catch((error: unknown) => {
+    recordTeamRealtimeTelemetry("publish_failures");
     logger.error({ err: error, projectId: event.projectId }, "Failed to publish team realtime event");
     emitToLocalSubscribers(event);
   });
+}
+
+export type TeamRealtimeHealth = {
+  websocket: "healthy";
+  pubSubListener: "connected" | "disconnected";
+  reconnectAttempts: number;
+  publishFailures: number;
+  hydrationFailures: number;
+};
+
+export function getTeamRealtimeHealth(): TeamRealtimeHealth {
+  const telemetry = getTeamRealtimeTelemetry();
+  return {
+    websocket: "healthy",
+    pubSubListener: pubSubClient ? "connected" : "disconnected",
+    reconnectAttempts: telemetry.reconnect_attempts,
+    publishFailures: telemetry.publish_failures,
+    hydrationFailures: telemetry.hydration_failures,
+  };
 }
 
 export function attachTeamRealtime(server: Server) {

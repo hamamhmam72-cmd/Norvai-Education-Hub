@@ -5,8 +5,43 @@
  * Norv_ai – Smart IT Learning Platform API
  * OpenAPI spec version: 0.1.0
  */
+export type HealthStatusStatus = typeof HealthStatusStatus[keyof typeof HealthStatusStatus];
+
+
+export const HealthStatusStatus = {
+  ok: 'ok',
+  degraded: 'degraded',
+} as const;
+
+export type HealthStatusTeamRealtimeWebsocket = typeof HealthStatusTeamRealtimeWebsocket[keyof typeof HealthStatusTeamRealtimeWebsocket];
+
+
+export const HealthStatusTeamRealtimeWebsocket = {
+  healthy: 'healthy',
+} as const;
+
+export type HealthStatusTeamRealtimePubSubListener = typeof HealthStatusTeamRealtimePubSubListener[keyof typeof HealthStatusTeamRealtimePubSubListener];
+
+
+export const HealthStatusTeamRealtimePubSubListener = {
+  connected: 'connected',
+  disconnected: 'disconnected',
+} as const;
+
+export type HealthStatusTeamRealtime = {
+  websocket: HealthStatusTeamRealtimeWebsocket;
+  pubSubListener: HealthStatusTeamRealtimePubSubListener;
+  /** @minimum 0 */
+  reconnectAttempts: number;
+  /** @minimum 0 */
+  publishFailures: number;
+  /** @minimum 0 */
+  hydrationFailures: number;
+};
+
 export interface HealthStatus {
-  status: string;
+  status: HealthStatusStatus;
+  teamRealtime: HealthStatusTeamRealtime;
 }
 
 export interface ErrorResponse {

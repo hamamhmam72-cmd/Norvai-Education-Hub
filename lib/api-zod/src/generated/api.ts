@@ -11,8 +11,23 @@ import * as zod from 'zod';
 /**
  * @summary Health check
  */
+export const healthCheckResponseTeamRealtimeReconnectAttemptsMin = 0;
+
+export const healthCheckResponseTeamRealtimePublishFailuresMin = 0;
+
+export const healthCheckResponseTeamRealtimeHydrationFailuresMin = 0;
+
+
+
 export const HealthCheckResponse = zod.object({
-  "status": zod.string()
+  "status": zod.enum(['ok', 'degraded']),
+  "teamRealtime": zod.object({
+  "websocket": zod.enum(['healthy']),
+  "pubSubListener": zod.enum(['connected', 'disconnected']),
+  "reconnectAttempts": zod.number().min(healthCheckResponseTeamRealtimeReconnectAttemptsMin),
+  "publishFailures": zod.number().min(healthCheckResponseTeamRealtimePublishFailuresMin),
+  "hydrationFailures": zod.number().min(healthCheckResponseTeamRealtimeHydrationFailuresMin)
+})
 })
 
 
