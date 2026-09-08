@@ -8,6 +8,7 @@
 
 export interface ProfileUpdate {
   fullName?: string;
+  governorate?: string;
   university?: string;
   major?: string;
   yearOfStudy?: number;

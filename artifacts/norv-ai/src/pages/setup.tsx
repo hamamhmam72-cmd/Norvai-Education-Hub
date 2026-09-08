@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { BrainCircuit, BookOpen, ChevronRight, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { BrainCircuit, BookOpen, ChevronRight, CheckCircle2, ArrowRight, Loader2, MapPin, University } from "lucide-react";
 import { useCompleteSetup, SetupInputSkillLevel } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { JORDAN_GOVERNORATES, JORDANIAN_UNIVERSITIES } from "@/data/jordan";
 
 const SPECIALIZATIONS = [
   "Programming & Development",
@@ -63,6 +65,7 @@ export default function Setup() {
   const completeSetupMutation = useCompleteSetup();
 
   const [formData, setFormData] = useState({
+    governorate: "",
     university: "",
     major: "",
     yearOfStudy: "",
@@ -88,6 +91,7 @@ export default function Setup() {
 
   const finishSetup = () => {
     const payload = {
+      governorate: formData.governorate,
       university: formData.university,
       major: formData.major,
       yearOfStudy: parseInt(formData.yearOfStudy) || 1,
@@ -157,16 +161,23 @@ export default function Setup() {
                   <p className="text-muted-foreground">Tell us where and what you're studying.</p>
                 </div>
                 
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="university">University</Label>
-                    <Input 
-                      id="university" 
-                      placeholder="e.g. MIT, Stanford, Al-Balqa" 
-                      value={formData.university}
-                      onChange={(e) => setFormData({...formData, university: e.target.value})}
-                    />
-                  </div>
+                  <div className="space-y-4 pt-4">
+                   <div className="grid gap-4 sm:grid-cols-2">
+                     <div className="space-y-2">
+                       <Label className="flex items-center gap-2"><MapPin className="size-4 text-primary" />Governorate</Label>
+                       <Select value={formData.governorate} onValueChange={(governorate) => setFormData({...formData, governorate})}>
+                         <SelectTrigger><SelectValue placeholder="Select governorate" /></SelectTrigger>
+                         <SelectContent>{JORDAN_GOVERNORATES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                       </Select>
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="flex items-center gap-2"><University className="size-4 text-primary" />University</Label>
+                       <Select value={formData.university} onValueChange={(university) => setFormData({...formData, university})}>
+                         <SelectTrigger><SelectValue placeholder="Select university" /></SelectTrigger>
+                         <SelectContent>{JORDANIAN_UNIVERSITIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                       </Select>
+                     </div>
+                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="major">Major / Degree</Label>
                     <Input 

@@ -9,6 +9,7 @@ import type { SetupInputSkillLevel } from './setupInputSkillLevel';
 
 export interface SetupInput {
   university?: string;
+  governorate?: string;
   major?: string;
   yearOfStudy?: number;
   specialization: string;

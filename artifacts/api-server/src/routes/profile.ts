@@ -14,6 +14,7 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     fullName: u.fullName,
     role: u.role,
     setupComplete: u.setupComplete,
+    governorate: u.governorate,
     university: u.university,
     major: u.major,
     yearOfStudy: u.yearOfStudy,
@@ -32,6 +33,7 @@ function safeUser(u: typeof usersTable.$inferSelect) {
 // POST /api/profile/setup
 router.post("/profile/setup", requireAuth, async (req, res) => {
   const {
+    governorate,
     university,
     major,
     yearOfStudy,
@@ -43,6 +45,7 @@ router.post("/profile/setup", requireAuth, async (req, res) => {
     .update(usersTable)
     .set({
       university,
+      governorate,
       major,
       yearOfStudy,
       specialization,
@@ -57,8 +60,8 @@ router.post("/profile/setup", requireAuth, async (req, res) => {
 
 // PATCH /api/profile
 router.patch("/profile", requireAuth, async (req, res) => {
-  const { fullName, university, major, yearOfStudy, specialization, skillLevel, knownLanguages, avatarUrl } = req.body;
-  const updates: Record<string, unknown> = { fullName, university, major, yearOfStudy, specialization, skillLevel, knownLanguages };
+  const { fullName, governorate, university, major, yearOfStudy, specialization, skillLevel, knownLanguages, avatarUrl } = req.body;
+  const updates: Record<string, unknown> = { fullName, governorate, university, major, yearOfStudy, specialization, skillLevel, knownLanguages };
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
   const [user] = await db
     .update(usersTable)

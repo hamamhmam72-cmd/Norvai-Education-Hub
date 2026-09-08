@@ -14,6 +14,8 @@ export interface User {
   role: UserRole;
   setupComplete: boolean;
   /** @nullable */
+  governorate?: string | null;
+  /** @nullable */
   university?: string | null;
   /** @nullable */
   major?: string | null;

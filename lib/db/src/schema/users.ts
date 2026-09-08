@@ -16,6 +16,7 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("student"), // "student" | "admin"
   setupComplete: boolean("setup_complete").notNull().default(false),
+  governorate: text("governorate"),
   university: text("university"),
   major: text("major"),
   yearOfStudy: integer("year_of_study"),

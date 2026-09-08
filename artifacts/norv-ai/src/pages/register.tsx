@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { BrainCircuit, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
+import { BrainCircuit, CheckCircle2, Loader2, ArrowRight, MapPin, University } from "lucide-react";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -18,11 +18,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { JORDAN_GOVERNORATES, JORDANIAN_UNIVERSITIES } from "@/data/jordan";
 
 const registerSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  governorate: z.string().optional(),
+  university: z.string().optional(),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -39,6 +43,8 @@ export default function Register() {
       fullName: "",
       username: "",
       password: "",
+      governorate: "",
+      university: "",
     },
   });
 
@@ -131,6 +137,40 @@ export default function Register() {
                         </FormItem>
                       )}
                     />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="governorate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><MapPin className="size-4 text-primary" />Governorate</FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Select governorate" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                {JORDAN_GOVERNORATES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="university"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><University className="size-4 text-primary" />University</FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Select university" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                {JORDANIAN_UNIVERSITIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormField
                       control={form.control}
                       name="username"

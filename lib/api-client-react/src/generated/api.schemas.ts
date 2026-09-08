@@ -24,6 +24,8 @@ export interface RegisterInput {
   password: string;
   /** @minLength 1 */
   fullName: string;
+  governorate?: string;
+  university?: string;
 }
 
 export interface LoginInput {
@@ -45,6 +47,8 @@ export interface User {
   fullName: string;
   role: UserRole;
   setupComplete: boolean;
+  /** @nullable */
+  governorate?: string | null;
   /** @nullable */
   university?: string | null;
   /** @nullable */
@@ -83,6 +87,7 @@ export const SetupInputSkillLevel = {
 
 export interface SetupInput {
   university?: string;
+  governorate?: string;
   major?: string;
   yearOfStudy?: number;
   specialization: string;
@@ -93,6 +98,7 @@ export interface SetupInput {
 
 export interface ProfileUpdate {
   fullName?: string;
+  governorate?: string;
   university?: string;
   major?: string;
   yearOfStudy?: number;

@@ -1062,6 +1062,10 @@ components:
         fullName:
           type: string
           minLength: 1
+        governorate:
+          type: string
+        university:
+          type: string
 
     LoginInput:
       type: object
@@ -1096,6 +1100,8 @@ components:
           enum: [student, admin]
         setupComplete:
           type: boolean
+        governorate:
+          type: ["string", "null"]
         university:
           type: ["string", "null"]
         major:
@@ -1130,6 +1136,8 @@ components:
       properties:
         university:
           type: string
+        governorate:
+          type: string
         major:
           type: string
         yearOfStudy:
@@ -1152,6 +1160,8 @@ components:
       type: object
       properties:
         fullName:
+          type: string
+        governorate:
           type: string
         university:
           type: string

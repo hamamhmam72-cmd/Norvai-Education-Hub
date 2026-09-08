@@ -60,3 +60,8 @@ When extending the API: import from `@workspace/integrations-gemini-ai` for the 
 - Frontend countdown: `components/AccessCountdown.tsx` — `setInterval` every second, shows HH:MM:SS for trials, Xd Yh for subscriptions; color-coded green→amber→red; calls `getMe()` on expiry to refresh user state and trigger gate
 - AccessGate client-side pre-check mirrors server logic: `trialValid = accessActivated && trialExpiresAt && new Date(trialExpiresAt) > now`
 - Countdown renders in the SidebarFooter (AppLayout) above the user profile block
+
+## Academic collaboration boundaries
+- University question-bank content is scoped by the student's university and major; new study-resource endpoints remain behind active-access enforcement.
+**Why:** Shared academic content must not leak across unrelated student groups, and expensive AI/resource features need the same server-side access boundary as the existing learning tools.
+**How to apply:** Preserve university+major filtering for collaboration features; do not enable bank verification, LinkedIn data, or external profile sharing without an explicit provider and permission flow.

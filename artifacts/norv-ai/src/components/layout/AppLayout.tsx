@@ -27,6 +27,7 @@ import {
   Compass,
   UserCircle,
   CreditCard,
+  Layers3,
   MessageSquareHeart,
   LogOut,
   Shield,
@@ -55,6 +56,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { titleKey: "codeDebugger" as const, url: "/debug", icon: Terminal },
     { titleKey: "quizGenerator" as const, url: "/quiz", icon: BrainCircuit },
     { titleKey: "careerAdvisor" as const, url: "/career", icon: Compass },
+    { titleKey: "studyHub" as const, url: "/study-hub", icon: Layers3 },
   ];
 
   const secondaryNavItems = [

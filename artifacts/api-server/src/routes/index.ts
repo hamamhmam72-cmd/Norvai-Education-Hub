@@ -17,6 +17,7 @@ import progressRouter from "./progress.js";
 import certificatesRouter from "./certificates.js";
 import feedbackRouter from "./feedback.js";
 import accessRouter from "./access.js";
+import studyRouter from "./study.js";
 
 import { requireActiveAccess } from "../middleware/auth.js";
 
@@ -26,7 +27,7 @@ const router: IRouter = Router();
 // or a validated activation code. Profile, subscription, feedback, access,
 // auth, upload (needed for receipts), certificates, and admin stay open.
 router.use(
-  ["/dashboard", "/lectures", "/curricula", "/chat", "/summary", "/debug", "/quizzes", "/career", "/progress"],
+  ["/dashboard", "/lectures", "/curricula", "/chat", "/summary", "/debug", "/quizzes", "/career", "/progress", "/study", "/question-bank", "/team"],
   requireActiveAccess
 );
 
@@ -48,5 +49,6 @@ router.use(progressRouter);
 router.use(certificatesRouter);
 router.use(feedbackRouter);
 router.use(accessRouter);
+router.use(studyRouter);
 
 export default router;

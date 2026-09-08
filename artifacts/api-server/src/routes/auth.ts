@@ -15,6 +15,7 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     fullName: u.fullName,
     role: u.role,
     setupComplete: u.setupComplete,
+    governorate: u.governorate,
     university: u.university,
     major: u.major,
     yearOfStudy: u.yearOfStudy,
@@ -32,7 +33,7 @@ function safeUser(u: typeof usersTable.$inferSelect) {
 
 // POST /api/auth/register
 router.post("/auth/register", async (req, res) => {
-  const { username, password, fullName } = req.body;
+  const { username, password, fullName, governorate, university } = req.body;
   if (!username || !password || !fullName) {
     res.status(400).json({ error: "username, password, fullName required" });
     return;
@@ -49,7 +50,7 @@ router.post("/auth/register", async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 12);
   const [user] = await db
     .insert(usersTable)
-    .values({ username, fullName, passwordHash })
+    .values({ username, fullName, passwordHash, governorate, university })
     .returning();
   const token = signToken({ userId: user.id, username: user.username, role: user.role });
   res.status(201).json({ token, user: safeUser(user) });

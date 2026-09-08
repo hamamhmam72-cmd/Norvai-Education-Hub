@@ -29,7 +29,9 @@ export const registerBodyPasswordMin = 6;
 export const RegisterBody = zod.object({
   "username": zod.string().min(registerBodyUsernameMin),
   "password": zod.string().min(registerBodyPasswordMin),
-  "fullName": zod.string().min(1)
+  "fullName": zod.string().min(1),
+  "governorate": zod.string().optional(),
+  "university": zod.string().optional()
 })
 
 export const RegisterResponse = zod.object({
@@ -40,6 +42,7 @@ export const RegisterResponse = zod.object({
   "fullName": zod.string(),
   "role": zod.enum(['student', 'admin']),
   "setupComplete": zod.boolean(),
+  "governorate": zod.string().nullish(),
   "university": zod.string().nullish(),
   "major": zod.string().nullish(),
   "yearOfStudy": zod.number().nullish(),
@@ -72,6 +75,7 @@ export const LoginResponse = zod.object({
   "fullName": zod.string(),
   "role": zod.enum(['student', 'admin']),
   "setupComplete": zod.boolean(),
+  "governorate": zod.string().nullish(),
   "university": zod.string().nullish(),
   "major": zod.string().nullish(),
   "yearOfStudy": zod.number().nullish(),
@@ -105,6 +109,7 @@ export const GetMeResponse = zod.object({
   "fullName": zod.string(),
   "role": zod.enum(['student', 'admin']),
   "setupComplete": zod.boolean(),
+  "governorate": zod.string().nullish(),
   "university": zod.string().nullish(),
   "major": zod.string().nullish(),
   "yearOfStudy": zod.number().nullish(),
@@ -125,6 +130,7 @@ export const GetMeResponse = zod.object({
  */
 export const CompleteSetupBody = zod.object({
   "university": zod.string().optional(),
+  "governorate": zod.string().optional(),
   "major": zod.string().optional(),
   "yearOfStudy": zod.number().optional(),
   "specialization": zod.string(),
@@ -139,6 +145,7 @@ export const CompleteSetupResponse = zod.object({
   "fullName": zod.string(),
   "role": zod.enum(['student', 'admin']),
   "setupComplete": zod.boolean(),
+  "governorate": zod.string().nullish(),
   "university": zod.string().nullish(),
   "major": zod.string().nullish(),
   "yearOfStudy": zod.number().nullish(),
@@ -159,6 +166,7 @@ export const CompleteSetupResponse = zod.object({
  */
 export const UpdateProfileBody = zod.object({
   "fullName": zod.string().optional(),
+  "governorate": zod.string().optional(),
   "university": zod.string().optional(),
   "major": zod.string().optional(),
   "yearOfStudy": zod.number().optional(),
@@ -174,6 +182,7 @@ export const UpdateProfileResponse = zod.object({
   "fullName": zod.string(),
   "role": zod.enum(['student', 'admin']),
   "setupComplete": zod.boolean(),
+  "governorate": zod.string().nullish(),
   "university": zod.string().nullish(),
   "major": zod.string().nullish(),
   "yearOfStudy": zod.number().nullish(),
@@ -1013,6 +1022,7 @@ export const GetAdminUsersResponseItem = zod.object({
   "fullName": zod.string(),
   "role": zod.enum(['student', 'admin']),
   "setupComplete": zod.boolean(),
+  "governorate": zod.string().nullish(),
   "university": zod.string().nullish(),
   "major": zod.string().nullish(),
   "yearOfStudy": zod.number().nullish(),

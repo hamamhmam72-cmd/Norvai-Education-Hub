@@ -9,3 +9,4 @@ export * from "./conversations";
 export * from "./messages";
 export * from "./certificates";
 export * from "./feedback";
+export * from "./study-resources";

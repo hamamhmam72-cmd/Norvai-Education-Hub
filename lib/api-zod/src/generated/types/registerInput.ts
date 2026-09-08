@@ -13,4 +13,6 @@ export interface RegisterInput {
   password: string;
   /** @minLength 1 */
   fullName: string;
+  governorate?: string;
+  university?: string;
 }
