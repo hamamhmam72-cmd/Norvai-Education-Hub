@@ -1717,7 +1717,7 @@ components:
           enum: ["3months", "6months", "1year"]
         accountType:
           type: string
-          enum: [individual, team]
+          enum: [individual, team, memorization]
         receiptUrl:
           type: string
         transferReference:
@@ -1741,7 +1741,7 @@ components:
           type: string
         accountType:
           type: string
-          enum: [individual, team]
+          enum: [individual, team, memorization]
         status:
           type: string
           enum: [pending, approved, rejected]

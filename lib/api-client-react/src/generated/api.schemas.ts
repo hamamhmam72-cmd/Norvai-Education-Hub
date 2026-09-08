@@ -484,6 +484,7 @@ export type SubscriptionRequestInputAccountType = typeof SubscriptionRequestInpu
 export const SubscriptionRequestInputAccountType = {
   individual: 'individual',
   team: 'team',
+  memorization: 'memorization',
 } as const;
 
 export interface SubscriptionRequestInput {
@@ -500,6 +501,7 @@ export type SubscriptionRequestAccountType = typeof SubscriptionRequestAccountTy
 export const SubscriptionRequestAccountType = {
   individual: 'individual',
   team: 'team',
+  memorization: 'memorization',
 } as const;
 
 export type SubscriptionRequestStatus = typeof SubscriptionRequestStatus[keyof typeof SubscriptionRequestStatus];

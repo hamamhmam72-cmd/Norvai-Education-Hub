@@ -35,6 +35,7 @@ import {
   Sun,
   Moon,
   Languages,
+  BookMarked,
 } from "lucide-react";
 import { ReactNode } from "react";
 import { useLogout } from "@workspace/api-client-react";
@@ -57,6 +58,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { titleKey: "quizGenerator" as const, url: "/quiz", icon: BrainCircuit },
     { titleKey: "careerAdvisor" as const, url: "/career", icon: Compass },
     { titleKey: "studyHub" as const, url: "/study-hub", icon: Layers3 },
+    { titleKey: "memorizationPlan" as const, url: "/memorization", icon: BookMarked },
   ];
 
   const secondaryNavItems = [

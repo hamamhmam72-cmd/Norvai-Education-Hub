@@ -4,6 +4,7 @@ export * from "./lectures";
 export * from "./summaries";
 export * from "./debug";
 export * from "./quizzes";
+export * from "./memorization";
 export * from "./subscriptions";
 export * from "./conversations";
 export * from "./messages";

@@ -26,6 +26,7 @@ import Subscription from '@/pages/subscription';
 import FeedbackPage from '@/pages/feedback';
 import AdminPanel from '@/pages/admin';
 import StudyHub from '@/pages/study-hub';
+import MemorizationPlan from '@/pages/memorization';
 import { AccessGate } from '@/components/AccessGate';
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/chat" component={Chat} />
           <Route path="/summary" component={SmartSummary} />
           <Route path="/study-hub" component={StudyHub} />
+          <Route path="/memorization" component={MemorizationPlan} />
           <Route path="/debug" component={CodeDebugger} />
           <Route path="/quiz" component={QuizGenerator} />
           <Route path="/career" component={CareerAdvisor} />

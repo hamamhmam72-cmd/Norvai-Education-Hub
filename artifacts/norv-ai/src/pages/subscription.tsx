@@ -8,7 +8,7 @@ import { useLang } from "@/context/LanguageContext";
 import {
   CreditCard, CheckCircle2, Clock, ShieldCheck,
   Upload, Sparkles, AlertCircle, Loader2, ArrowRight, ImageIcon, X,
-  User, Users, MessageCircle, Code2,
+  User, Users, MessageCircle, Code2, BookMarked, BrainCircuit,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,7 +36,7 @@ export default function Subscription() {
   const requestSubscription = useRequestSubscription();
 
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionRequestInputPlan>("6months");
-  const [accountType, setAccountType] = useState<"individual" | "team">("individual");
+  const [accountType, setAccountType] = useState<"individual" | "team" | "memorization">("individual");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [transferReference, setTransferReference] = useState("");
   const [senderName, setSenderName] = useState("");
@@ -170,13 +170,17 @@ export default function Subscription() {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <button type="button" onClick={() => setAccountType("individual")} className={cn("rounded-2xl border-2 p-5 text-start transition-all", accountType === "individual" ? "border-primary bg-primary/5" : "border-border/60")}>
               <div className="flex items-center gap-3"><User className="size-6 text-primary" /><div><div className="font-bold">Individual plan</div><div className="text-sm text-muted-foreground">Personal access with the base prices.</div></div></div>
             </button>
             <button type="button" onClick={() => setAccountType("team")} className={cn("rounded-2xl border-2 p-5 text-start transition-all", accountType === "team" ? "border-primary bg-primary/5" : "border-border/60")}>
               <div className="flex items-center gap-3"><Users className="size-6 text-primary" /><div><div className="font-bold">Team plan</div><div className="text-sm text-muted-foreground">Double price with collaborative workspace.</div></div></div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground"><span className="flex items-center gap-1"><MessageCircle className="size-3" />Group chat & images</span><span className="flex items-center gap-1"><Code2 className="size-3" />Shared code & projects</span></div>
+            </button>
+            <button type="button" onClick={() => setAccountType("memorization")} className={cn("rounded-2xl border-2 p-5 text-start transition-all", accountType === "memorization" ? "border-primary bg-primary/5" : "border-border/60")}>
+              <div className="flex items-center gap-3"><BookMarked className="size-6 text-primary" /><div><div className="font-bold">Memorization Plan</div><div className="text-sm text-muted-foreground">Active recall tools for theoretical subjects.</div></div></div>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground"><span className="flex items-center gap-1"><BrainCircuit className="size-3" />Flashcards & spaced repetition</span><span className="flex items-center gap-1"><Code2 className="size-3" />Quizzes & exam bank</span></div>
             </button>
           </div>
           {/* Plan Cards */}

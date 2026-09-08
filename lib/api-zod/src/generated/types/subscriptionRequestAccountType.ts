@@ -12,4 +12,5 @@ export type SubscriptionRequestAccountType = typeof SubscriptionRequestAccountTy
 export const SubscriptionRequestAccountType = {
   individual: 'individual',
   team: 'team',
+  memorization: 'memorization',
 } as const;

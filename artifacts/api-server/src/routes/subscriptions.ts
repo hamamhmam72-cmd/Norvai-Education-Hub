@@ -60,7 +60,9 @@ router.get("/subscriptions/status", requireAuth, async (req, res) => {
 router.post("/subscriptions/request", requireAuth, async (req, res) => {
   const uid = req.user!.userId;
   const plan = typeof req.body.plan === "string" ? req.body.plan : "";
-  const accountType = req.body.accountType === "team" ? "team" : req.body.accountType === "individual" ? "individual" : "";
+  const accountType = ["individual", "team", "memorization"].includes(req.body.accountType)
+    ? req.body.accountType as "individual" | "team" | "memorization"
+    : "";
   const receiptUrl = typeof req.body.receiptUrl === "string" ? req.body.receiptUrl.trim() : "";
   const transferReference = typeof req.body.transferReference === "string"
     ? req.body.transferReference.trim().toUpperCase().slice(0, 80)
