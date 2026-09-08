@@ -3,3 +3,4 @@
 - [Gemini Integration Build](gemini-build.md) — @google/* must NOT be in esbuild externals; bundle it
 - [CliQ verification boundary](cliq-verification.md) — receipts stay pending; only a signed settled webhook can auto-activate access
 - [Team entitlement boundary](team-entitlements.md) — collaborative projects, chat, images, and shared code require an active Team tier plus project membership
+- [Native TypeScript tests](native-typescript-tests.md) — Node 24 runs focused .ts tests directly; isolate them from workspace alias/database imports

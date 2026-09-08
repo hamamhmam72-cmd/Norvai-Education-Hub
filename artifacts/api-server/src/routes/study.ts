@@ -19,6 +19,7 @@ import {
 import { requireAuth } from "../middleware/auth.js";
 import { openai } from "../lib/openai.js";
 import { broadcastTeamEvent } from "../lib/team-realtime.js";
+import { saveTeamCodeWithVersion } from "../lib/team-collaboration.js";
 
 const router = Router();
 const allowedMaterialTypes = new Set([
@@ -468,32 +469,37 @@ router.put("/team/projects/:id/code", requireAuth, async (req, res): Promise<voi
     res.status(400).json({ error: "A valid code version is required" });
     return;
   }
-  const [project] = await db.update(teamProjectsTable).set({
-    sharedCode: code,
-    codeLanguage,
-    codeVersion: sql`${teamProjectsTable.codeVersion} + 1`,
-  })
-    .where(and(eq(teamProjectsTable.id, projectId), eq(teamProjectsTable.codeVersion, expectedVersion))).returning({
-      id: teamProjectsTable.id,
-      sharedCode: teamProjectsTable.sharedCode,
-      codeLanguage: teamProjectsTable.codeLanguage,
-      codeVersion: teamProjectsTable.codeVersion,
-      updatedAt: teamProjectsTable.updatedAt,
-    });
-  if (!project) {
-    const [current] = await db.select({
-      id: teamProjectsTable.id,
-      sharedCode: teamProjectsTable.sharedCode,
-      codeLanguage: teamProjectsTable.codeLanguage,
-      codeVersion: teamProjectsTable.codeVersion,
-      updatedAt: teamProjectsTable.updatedAt,
-    }).from(teamProjectsTable).where(eq(teamProjectsTable.id, projectId)).limit(1);
-    if (!current) { res.status(404).json({ error: "Project not found" }); return; }
-    res.status(409).json({ error: "Newer shared code is available", current });
-    return;
-  }
-  broadcastTeamEvent({ type: "code.updated", projectId, code: project });
-  res.json(project);
+  const result = await saveTeamCodeWithVersion({
+    updateIfVersion: async (input) => {
+      const [project] = await db.update(teamProjectsTable).set({
+        sharedCode: input.code,
+        codeLanguage: input.codeLanguage,
+        codeVersion: sql`${teamProjectsTable.codeVersion} + 1`,
+      })
+        .where(and(eq(teamProjectsTable.id, input.projectId), eq(teamProjectsTable.codeVersion, input.expectedVersion))).returning({
+          id: teamProjectsTable.id,
+          sharedCode: teamProjectsTable.sharedCode,
+          codeLanguage: teamProjectsTable.codeLanguage,
+          codeVersion: teamProjectsTable.codeVersion,
+          updatedAt: teamProjectsTable.updatedAt,
+        });
+      return project ?? null;
+    },
+    getCurrent: async (currentProjectId) => {
+      const [current] = await db.select({
+        id: teamProjectsTable.id,
+        sharedCode: teamProjectsTable.sharedCode,
+        codeLanguage: teamProjectsTable.codeLanguage,
+        codeVersion: teamProjectsTable.codeVersion,
+        updatedAt: teamProjectsTable.updatedAt,
+      }).from(teamProjectsTable).where(eq(teamProjectsTable.id, currentProjectId)).limit(1);
+      return current ?? null;
+    },
+  }, { projectId, code, codeLanguage, expectedVersion });
+  if (result.status === 404) { res.status(404).json({ error: result.error }); return; }
+  if (result.status === 409) { res.status(409).json({ error: result.error, current: result.current }); return; }
+  broadcastTeamEvent({ type: "code.updated", projectId, code: result.project });
+  res.json(result.project);
 });
 
 router.get("/team/projects/:id/messages", requireAuth, async (req, res): Promise<void> => {

@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer } from "ws";
 import { and, eq } from "drizzle-orm";
-import { db, pool, type PoolClient } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import {
   teamMessagesTable,
   teamProjectMembersTable,
@@ -10,17 +10,12 @@ import {
 } from "@workspace/db/schema";
 import { verifyToken } from "./jwt.js";
 import { logger } from "./logger.js";
+import { canAccessTeamProject } from "./team-collaboration.js";
+import { createTeamRealtimeHub, type TeamEvent } from "./team-realtime-hub.js";
 
-type TeamEvent =
-  | { type: "message.created"; projectId: number; message: TeamMessagePayload }
-  | { type: "code.updated"; projectId: number; code: TeamCodePayload };
+export { createTeamRealtimeHub, type TeamEvent } from "./team-realtime-hub.js";
 
 type TeamMessagePayload = {
-  id: number;
-  [key: string]: unknown;
-};
-
-type TeamCodePayload = {
   id: number;
   [key: string]: unknown;
 };
@@ -29,19 +24,24 @@ type TeamPubSubEvent =
   | { type: "message.created"; projectId: number; messageId: number }
   | { type: "code.updated"; projectId: number };
 
-const subscribers = new Map<number, Set<WebSocket>>();
 const TEAM_EVENTS_CHANNEL = "norv_team_events";
 const reconnectDelayMs = 5_000;
 let pubSubClient: PoolClient | null = null;
 let pubSubConnectPromise: Promise<void> | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
 let realtimeClosed = false;
+const realtimeHub = createTeamRealtimeHub();
+
+type PoolClient = {
+  query(sql: string, values?: unknown[]): Promise<unknown>;
+  on(event: "notification", listener: (notification: { channel?: string; payload?: string }) => void): PoolClient;
+  once(event: "error", listener: (error: Error) => void): PoolClient;
+  once(event: "end", listener: () => void): PoolClient;
+  release(destroy?: boolean): void;
+};
 
 function emitToLocalSubscribers(event: TeamEvent) {
-  const payload = JSON.stringify(event);
-  for (const socket of subscribers.get(event.projectId) ?? []) {
-    if (socket.readyState === WebSocket.OPEN) socket.send(payload);
-  }
+  realtimeHub.broadcast(event);
 }
 
 function toPubSubEvent(event: TeamEvent): TeamPubSubEvent {
@@ -51,7 +51,7 @@ function toPubSubEvent(event: TeamEvent): TeamPubSubEvent {
   return {
     type: event.type,
     projectId: event.projectId,
-    messageId: event.message.id,
+    messageId: (event.message as TeamMessagePayload).id,
   };
 }
 
@@ -134,10 +134,10 @@ async function connectPubSub() {
   pubSubConnectPromise = (async () => {
     let client: PoolClient | null = null;
     try {
-      client = await pool.connect();
+      client = await pool.connect() as PoolClient;
       await client.query(`LISTEN ${TEAM_EVENTS_CHANNEL}`);
       pubSubClient = client;
-      client.on("notification", (notification) => {
+      client.on("notification", (notification: { channel?: string; payload?: string }) => {
         if (notification.channel === TEAM_EVENTS_CHANNEL && notification.payload) {
           void handlePubSubNotification(notification.payload);
         }
@@ -152,7 +152,7 @@ async function connectPubSub() {
         else logger.warn("Team realtime pub/sub connection ended");
         schedulePubSubReconnect();
       };
-      client.once("error", (error) => handleDisconnect(error));
+      client.once("error", (error: Error) => handleDisconnect(error));
       client.once("end", () => handleDisconnect());
       logger.info({ channel: TEAM_EVENTS_CHANNEL }, "Team realtime pub/sub connected");
     } catch (error) {
@@ -212,20 +212,16 @@ export function attachTeamRealtime(server: Server) {
           eq(teamProjectMembersTable.projectId, projectId),
           eq(teamProjectMembersTable.userId, identity.userId),
         )).limit(1);
-      const entitled = user?.role === "admin"
-        || Boolean(user?.subscriptionActive && user.subscriptionTier === "team" && membership);
+      const entitled = canAccessTeamProject(user, membership);
       if (!entitled) throw new Error("Forbidden");
 
       wss.handleUpgrade(request, socket, head, (ws) => {
-        const projectSubscribers = subscribers.get(projectId) ?? new Set<WebSocket>();
-        projectSubscribers.add(ws);
-        subscribers.set(projectId, projectSubscribers);
+        const removeSubscriber = realtimeHub.addSubscriber(projectId, ws);
         let cleanedUp = false;
         const cleanup = () => {
           if (cleanedUp) return;
           cleanedUp = true;
-          projectSubscribers.delete(ws);
-          if (projectSubscribers.size === 0) subscribers.delete(projectId);
+          removeSubscriber();
         };
         ws.on("error", (error) => {
           logger.warn({ err: error, projectId, userId: identity.userId }, "Team realtime client error");

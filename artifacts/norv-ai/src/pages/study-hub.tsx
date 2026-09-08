@@ -9,6 +9,7 @@ import {
 import { useCreateSummary, useAnalyzeCode, type Summary, type DebugSession } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { mergeTeamMessages, type TeamMessage } from "@/lib/team-collaboration";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -255,7 +256,6 @@ function TeamReview({ onLog }: { onLog: () => void }) {
 }
 
 type TeamProjectView = { id: number; name: string };
-type TeamMessage = { id: number; userId: number; username?: string; fullName?: string; content: string | null; imageUrl: string | null; createdAt: string };
 type TeamCode = { sharedCode: string; codeLanguage: string; codeVersion: number; updatedAt: string };
 
 function TeamWorkspace() {
@@ -287,11 +287,7 @@ function TeamWorkspace() {
     codeDirtyRef.current = false;
     setCodeDirty(false);
     setNotice("");
-    const mergeMessages = (incoming: TeamMessage[]) => setMessages((items) => {
-      const byId = new Map(items.map((item) => [item.id, item]));
-      for (const item of incoming) byId.set(item.id, item);
-      return [...byId.values()].sort((a, b) => a.id - b.id);
-    });
+    const mergeMessages = (incoming: TeamMessage[]) => setMessages((items) => mergeTeamMessages(items, incoming));
     const applyCodeSnapshot = (project: TeamCode) => {
       if (stopped || project.codeVersion < codeVersionRef.current) return;
       if (codeDirtyRef.current) {
@@ -317,8 +313,7 @@ function TeamWorkspace() {
     refresh();
     let socket: WebSocket | undefined;
     let reconnectTimer: number | undefined;
-    const mergeMessage = (item: TeamMessage) => setMessages((items) =>
-      items.some((existing) => existing.id === item.id) ? items : [...items, item].sort((a, b) => a.id - b.id));
+    const mergeMessage = (item: TeamMessage) => setMessages((items) => mergeTeamMessages(items, [item]));
     const connect = () => {
       const token = localStorage.getItem("norv_token");
       if (!token || stopped) return;
