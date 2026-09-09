@@ -355,6 +355,71 @@ test("rate-limit store alerts contain only safe route and user-scope metadata", 
   }
 });
 
+test("successful activation clears earlier failures and the next failure starts a fresh window", async () => {
+  const username = `activation-reset-${process.pid}-${keyNumber}`;
+  const [user] = await db.insert(usersTable).values({
+    username,
+    fullName: "Activation reset regression test",
+    passwordHash: "not-a-real-password",
+    university: "Regression University",
+    major: "Regression Major",
+  }).returning({ id: usersTable.id });
+  if (!user) throw new Error("Could not create activation reset test user");
+
+  const activationKey = `activation-code:${user.id}`;
+  const token = signToken({ userId: user.id, username, role: "student" });
+  const server = await startRouterServer(accessRouter);
+  const activate = (code: string) => fetch(`${serverUrl(server)}/access/activate`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ code }),
+  });
+
+  try {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const failed = await activate("wrong-code");
+      assert.equal(failed.status, 400);
+      assert.deepEqual(await failed.json(), { error: "Invalid activation code" });
+    }
+    const [counterBeforeSuccess] = await db.select()
+      .from(abuseRateLimitsTable)
+      .where(eq(abuseRateLimitsTable.key, activationKey));
+    assert.equal(counterBeforeSuccess?.count, 3);
+
+    const activated = await activate("Norv.ai.h52");
+    assert.equal(activated.status, 200);
+    const activationBody = await activated.json() as {
+      activated: boolean;
+      accessActivated: boolean;
+      trialExpiresAt: string | null;
+    };
+    assert.equal(activationBody.activated, true);
+    assert.equal(activationBody.accessActivated, true);
+    assert.ok(activationBody.trialExpiresAt);
+    assert.equal(
+      (await db.select().from(abuseRateLimitsTable)
+        .where(eq(abuseRateLimitsTable.key, activationKey))).length,
+      0,
+    );
+
+    const freshFailure = await activate("wrong-code");
+    assert.equal(freshFailure.status, 400);
+    assert.deepEqual(await freshFailure.json(), { error: "Invalid activation code" });
+    const [freshCounter] = await db.select()
+      .from(abuseRateLimitsTable)
+      .where(eq(abuseRateLimitsTable.key, activationKey));
+    assert.equal(freshCounter?.count, 1);
+  } finally {
+    await closeServer(server);
+    await db.delete(abuseRateLimitsTable)
+      .where(eq(abuseRateLimitsTable.key, activationKey));
+    await db.delete(usersTable).where(eq(usersTable.id, user.id));
+  }
+});
+
 test("preserves the material-processing and activation 429 response bodies", async () => {
   const userId = 2_000_000 + process.pid;
   const materialKey = `ai-hourly:${userId}`;
