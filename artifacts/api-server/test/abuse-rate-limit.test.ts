@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { createServer, type Server } from "node:http";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, like } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
 import express from "express";
 import { db, pool } from "@workspace/db";
 import * as schema from "@workspace/db/schema";
@@ -13,6 +13,7 @@ import {
 } from "@workspace/db/schema";
 import {
   AbuseRateLimitUnavailableError,
+  ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE,
   createAbuseRateLimiter,
   recordAbuseRateLimitStoreUnavailable,
 } from "../src/lib/abuse-rate-limit.ts";
@@ -186,6 +187,74 @@ test("expired windows reset and opportunistically remove expired records", async
     assert.equal(staleRows.length, 0);
   } finally {
     await removeKeys(database, database, key, staleKey);
+  }
+});
+
+test("bounded cleanup removes exact batches, drains backlog, and preserves concurrent atomicity", async () => {
+  const cleanupPrefix = nextKey("bounded-cleanup");
+  const activeKey = `${cleanupPrefix}:active`;
+  const concurrentKey = `${cleanupPrefix}:concurrent`;
+  const now = new Date("2026-09-08T15:30:00.000Z");
+  const staleAt = new Date("2000-01-01T00:00:00.000Z");
+  const limiterA = createAbuseRateLimiter(pooledDatabaseA);
+  const limiterB = createAbuseRateLimiter(pooledDatabaseB);
+  const countRows = async (suffix = "%") => {
+    const [row] = await db.select({
+      count: sql<number>`count(*)::int`,
+    }).from(abuseRateLimitsTable)
+      .where(like(abuseRateLimitsTable.key, `${cleanupPrefix}:${suffix}`));
+    return Number(row?.count ?? 0);
+  };
+
+  try {
+    await db.insert(abuseRateLimitsTable).values(
+      Array.from({ length: ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE + 37 }, (_, index) => ({
+        key: `${cleanupPrefix}:first:${index}`,
+        count: 1,
+        expiresAt: staleAt,
+        updatedAt: staleAt,
+      })),
+    );
+
+    assert.equal(await limiterA.allowAbuseRequest(activeKey, 1_000, 60_000, now), true);
+    assert.equal(await countRows("first:%"), 37);
+    const [activeAfterFirstBatch] = await db.select()
+      .from(abuseRateLimitsTable)
+      .where(eq(abuseRateLimitsTable.key, activeKey));
+    assert.equal(activeAfterFirstBatch?.count, 1);
+
+    assert.equal(await limiterA.allowAbuseRequest(activeKey, 1_000, 60_000, now), true);
+    assert.equal(await countRows("first:%"), 0);
+    const [activeAfterDrain] = await db.select()
+      .from(abuseRateLimitsTable)
+      .where(eq(abuseRateLimitsTable.key, activeKey));
+    assert.equal(activeAfterDrain?.count, 2);
+
+    await db.insert(abuseRateLimitsTable).values(
+      Array.from({ length: ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE * 2 }, (_, index) => ({
+        key: `${cleanupPrefix}:concurrent-stale:${index}`,
+        count: 1,
+        expiresAt: staleAt,
+        updatedAt: staleAt,
+      })),
+    );
+    const results = await Promise.all(
+      Array.from({ length: 40 }, (_, index) => (
+        (index % 2 === 0 ? limiterA : limiterB)
+          .allowAbuseRequest(concurrentKey, 20, 60_000, now)
+      )),
+    );
+
+    assert.equal(results.filter(Boolean).length, 20);
+    assert.equal(results.filter((allowed) => !allowed).length, 20);
+    assert.equal(await countRows("concurrent-stale:%"), 0);
+    const [concurrentCounter] = await db.select()
+      .from(abuseRateLimitsTable)
+      .where(eq(abuseRateLimitsTable.key, concurrentKey));
+    assert.equal(concurrentCounter?.count, 21);
+  } finally {
+    await db.delete(abuseRateLimitsTable)
+      .where(like(abuseRateLimitsTable.key, `${cleanupPrefix}%`));
   }
 });
 
