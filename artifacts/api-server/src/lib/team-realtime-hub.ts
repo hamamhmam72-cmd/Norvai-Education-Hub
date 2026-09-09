@@ -4,6 +4,11 @@ export type TeamEvent =
   | { type: "message.created"; projectId: number; message: unknown }
   | { type: "code.updated"; projectId: number; code: unknown };
 
+export type TeamAccessRevocationReason =
+  | "TEAM_MEMBERSHIP_REMOVED"
+  | "TEAM_PLAN_DOWNGRADED"
+  | "TEAM_SUBSCRIPTION_EXPIRED";
+
 export function createTeamRealtimeHub() {
   type Subscriber = { userId: number; socket: WebSocket };
   const subscribers = new Map<number, Set<Subscriber>>();
@@ -25,7 +30,7 @@ export function createTeamRealtimeHub() {
         if (socket.readyState === WebSocket.OPEN) socket.send(payload);
       }
     },
-    revokeAccess(userId: number, projectId?: number) {
+    revokeAccess(userId: number, projectId: number | undefined, reason: TeamAccessRevocationReason) {
       const projects = projectId === undefined
         ? [...subscribers.entries()]
         : [[projectId, subscribers.get(projectId) ?? new Set<Subscriber>()] as const];
@@ -37,7 +42,7 @@ export function createTeamRealtimeHub() {
             subscriber.socket.readyState === WebSocket.OPEN
             || subscriber.socket.readyState === WebSocket.CONNECTING
           ) {
-            subscriber.socket.close(4403, "TEAM_ACCESS_REVOKED");
+            subscriber.socket.close(4403, reason);
           }
         }
         if (projectSubscribers.size === 0) subscribers.delete(currentProjectId);

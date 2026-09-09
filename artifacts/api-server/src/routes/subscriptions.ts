@@ -173,7 +173,9 @@ router.post("/subscriptions/cliq/webhook", async (req, res) => {
   expiry.setMonth(expiry.getMonth() + (PLAN_DURATION_MONTHS[request.plan] ?? 3));
   await db.update(subscriptionRequestsTable).set({ status: "approved" }).where(eq(subscriptionRequestsTable.id, request.id));
   await db.update(usersTable).set({ subscriptionActive: true, subscriptionTier: request.accountType, subscriptionExpiry: expiry }).where(eq(usersTable.id, request.userId));
-  if (request.accountType !== "team") revokeTeamRealtimeAccess(request.userId);
+  if (request.accountType !== "team") {
+    revokeTeamRealtimeAccess(request.userId, undefined, "TEAM_PLAN_DOWNGRADED");
+  }
   res.json({ id: request.id, status: "approved" });
 });
 
@@ -232,7 +234,9 @@ router.post(
       .update(usersTable)
       .set({ subscriptionActive: true, subscriptionTier: request.accountType, subscriptionExpiry: expiry })
       .where(eq(usersTable.id, request.userId));
-    if (request.accountType !== "team") revokeTeamRealtimeAccess(request.userId);
+    if (request.accountType !== "team") {
+      revokeTeamRealtimeAccess(request.userId, undefined, "TEAM_PLAN_DOWNGRADED");
+    }
 
     res.json({ id, status: "approved" });
   }

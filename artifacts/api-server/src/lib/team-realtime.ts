@@ -15,9 +15,17 @@ import {
   recordTeamRealtimeTelemetry,
 } from "./logger.js";
 import { canAccessTeamProject } from "./team-collaboration.js";
-import { createTeamRealtimeHub, type TeamEvent } from "./team-realtime-hub.js";
+import {
+  createTeamRealtimeHub,
+  type TeamAccessRevocationReason,
+  type TeamEvent,
+} from "./team-realtime-hub.js";
 
-export { createTeamRealtimeHub, type TeamEvent } from "./team-realtime-hub.js";
+export {
+  createTeamRealtimeHub,
+  type TeamAccessRevocationReason,
+  type TeamEvent,
+} from "./team-realtime-hub.js";
 
 type TeamMessagePayload = {
   id: number;
@@ -27,7 +35,12 @@ type TeamMessagePayload = {
 type TeamPubSubEvent =
   | { type: "message.created"; projectId: number; messageId: number }
   | { type: "code.updated"; projectId: number }
-  | { type: "access.revoked"; userId: number; projectId?: number };
+  | {
+      type: "access.revoked";
+      userId: number;
+      projectId?: number;
+      reason: TeamAccessRevocationReason;
+    };
 
 const TEAM_EVENTS_CHANNEL = "norv_team_events";
 const reconnectDelayMs = 5_000;
@@ -41,6 +54,31 @@ let reconnectTimer: NodeJS.Timeout | null = null;
 let realtimeClosed = false;
 let pubSubConnectionAttempted = false;
 const realtimeHub = createTeamRealtimeHub();
+const revocationReasons = new Set<TeamAccessRevocationReason>([
+  "TEAM_MEMBERSHIP_REMOVED",
+  "TEAM_PLAN_DOWNGRADED",
+  "TEAM_SUBSCRIPTION_EXPIRED",
+]);
+
+export function teamAccessRevocationReason(
+  entitlement: {
+    subscriptionActive?: boolean | null;
+    subscriptionTier?: string | null;
+    subscriptionExpiry?: Date | string | null;
+  } | null | undefined,
+  hasMembership: boolean,
+  now = new Date(),
+): TeamAccessRevocationReason {
+  const expiry = entitlement?.subscriptionExpiry
+    ? new Date(entitlement.subscriptionExpiry)
+    : null;
+  if (expiry && expiry <= now) return "TEAM_SUBSCRIPTION_EXPIRED";
+  if (!entitlement?.subscriptionActive || entitlement.subscriptionTier !== "team") {
+    return "TEAM_PLAN_DOWNGRADED";
+  }
+  if (!hasMembership) return "TEAM_MEMBERSHIP_REMOVED";
+  return "TEAM_PLAN_DOWNGRADED";
+}
 
 type PoolClient = {
   query(sql: string, values?: unknown[]): Promise<unknown>;
@@ -79,7 +117,13 @@ async function revalidateProjectSubscribers(projectId: number) {
     }
   }
   for (const userId of userIds) {
-    if (!authorized.has(userId)) realtimeHub.revokeAccess(userId, projectId);
+    if (authorized.has(userId)) continue;
+    const entitlement = entitlements.find((item) => item.userId === userId);
+    realtimeHub.revokeAccess(
+      userId,
+      projectId,
+      teamAccessRevocationReason(entitlement, Boolean(entitlement?.membershipId)),
+    );
   }
 }
 
@@ -103,7 +147,7 @@ function toPubSubEvent(event: TeamEvent): TeamPubSubEvent {
   };
 }
 
-function parsePubSubEvent(payload: string): TeamPubSubEvent | null {
+export function parsePubSubEvent(payload: string): TeamPubSubEvent | null {
   try {
     const value: unknown = JSON.parse(payload);
     if (!value || typeof value !== "object") return null;
@@ -111,11 +155,18 @@ function parsePubSubEvent(payload: string): TeamPubSubEvent | null {
     if (candidate.type === "access.revoked") {
       const userId = candidate.userId;
       const projectId = candidate.projectId;
+      const reason = candidate.reason;
       if (typeof userId !== "number" || !Number.isInteger(userId) || userId <= 0) return null;
       if (projectId !== undefined && (
         typeof projectId !== "number" || !Number.isInteger(projectId) || projectId <= 0
       )) return null;
-      return { type: candidate.type, userId, projectId: projectId as number | undefined };
+      if (typeof reason !== "string" || !revocationReasons.has(reason as TeamAccessRevocationReason)) return null;
+      return {
+        type: candidate.type,
+        userId,
+        projectId: projectId as number | undefined,
+        reason: reason as TeamAccessRevocationReason,
+      };
     }
     const projectId = candidate.projectId;
     if (typeof projectId !== "number" || !Number.isInteger(projectId) || projectId <= 0) return null;
@@ -173,7 +224,7 @@ async function handlePubSubNotification(payload: string) {
     return;
   }
   if (event.type === "access.revoked") {
-    realtimeHub.revokeAccess(event.userId, event.projectId);
+    realtimeHub.revokeAccess(event.userId, event.projectId, event.reason);
     return;
   }
   try {
@@ -259,11 +310,15 @@ export function broadcastTeamEvent(event: TeamEvent) {
   });
 }
 
-export function revokeTeamRealtimeAccess(userId: number, projectId?: number) {
-  const event: TeamPubSubEvent = { type: "access.revoked", userId, projectId };
+export function revokeTeamRealtimeAccess(
+  userId: number,
+  projectId: number | undefined,
+  reason: TeamAccessRevocationReason,
+) {
+  const event: TeamPubSubEvent = { type: "access.revoked", userId, projectId, reason };
   const payload = JSON.stringify(event);
   if (!pubSubClient) {
-    realtimeHub.revokeAccess(userId, projectId);
+    realtimeHub.revokeAccess(userId, projectId, reason);
     recordTeamRealtimeTelemetry("publish_failures");
     logger.warn({ userId, projectId }, "Team access revocation delivered locally only");
     void connectPubSub();
@@ -272,7 +327,7 @@ export function revokeTeamRealtimeAccess(userId: number, projectId?: number) {
   void pubSubClient.query("SELECT pg_notify($1, $2)", [TEAM_EVENTS_CHANNEL, payload]).catch((error: unknown) => {
     recordTeamRealtimeTelemetry("publish_failures");
     logger.error({ err: error, userId, projectId }, "Failed to publish team access revocation");
-    realtimeHub.revokeAccess(userId, projectId);
+    realtimeHub.revokeAccess(userId, projectId, reason);
   });
 }
 
@@ -390,7 +445,7 @@ export function attachTeamRealtime(server: Server) {
             const remainingMs = user.subscriptionExpiry!.getTime() - Date.now();
             if (remainingMs <= 0) {
               removeSubscriber();
-              ws.close(4403, "TEAM_ACCESS_REVOKED");
+              ws.close(4403, "TEAM_SUBSCRIPTION_EXPIRED");
               return;
             }
             expiryTimer = setTimeout(closeAtExpiry, Math.min(remainingMs, 2_147_483_647));

@@ -9,7 +9,12 @@ import {
 import { useCreateSummary, useAnalyzeCode, type Summary, type DebugSession } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { mergeTeamMessages, shouldReconnectTeamSocket, type TeamMessage } from "@/lib/team-collaboration";
+import {
+  mergeTeamMessages,
+  shouldReconnectTeamSocket,
+  teamAccessRevocationMessage,
+  type TeamMessage,
+} from "@/lib/team-collaboration";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -365,7 +370,7 @@ function TeamWorkspace() {
         if (stopped) return;
         if (!shouldReconnectTeamSocket(event.code)) {
           setAccessRevoked(true);
-          setNotice("Your Team access was removed or expired. Reconnect after access is restored.");
+          setNotice(teamAccessRevocationMessage(event.reason));
           return;
         }
         const delay = Math.min(10_000, 500 * 2 ** reconnectAttempt.current++);

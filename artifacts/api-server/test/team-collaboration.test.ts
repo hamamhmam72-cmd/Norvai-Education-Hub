@@ -8,10 +8,15 @@ import {
   type TeamCodeSnapshot,
 } from "../src/lib/team-collaboration.ts";
 import { createTeamRealtimeHub } from "../src/lib/team-realtime-hub.ts";
-import { nextEntitlementCheckDelay } from "../src/lib/team-realtime.ts";
+import {
+  nextEntitlementCheckDelay,
+  parsePubSubEvent,
+  teamAccessRevocationReason,
+} from "../src/lib/team-realtime.ts";
 import {
   mergeTeamMessages,
   shouldReconnectTeamSocket,
+  teamAccessRevocationMessage,
   type TeamMessage,
 } from "../../norv-ai/src/lib/team-collaboration.ts";
 
@@ -55,8 +60,8 @@ test("revoked Team access closes once, blocks later broadcasts, and permits manu
   });
   assert.equal(first.events.length, 2);
 
-  hub.revokeAccess(101, 12);
-  assert.deepEqual(first.closes, [{ code: 4403, reason: "TEAM_ACCESS_REVOKED" }]);
+  hub.revokeAccess(101, 12, "TEAM_MEMBERSHIP_REMOVED");
+  assert.deepEqual(first.closes, [{ code: 4403, reason: "TEAM_MEMBERSHIP_REMOVED" }]);
   assert.equal(hub.subscriberCount(12), 0);
 
   hub.broadcast({ type: "message.created", projectId: 12, message: message(2) });
@@ -69,22 +74,50 @@ test("revoked Team access closes once, blocks later broadcasts, and permits manu
   assert.equal(first.events.length, 2);
 });
 
-test("membership removal, subscription downgrade, and expiry share the same revoked behavior", () => {
+test("membership removal, subscription downgrade, and expiry carry distinct safe reasons", () => {
   const hub = createTeamRealtimeHub();
   const cases = [
-    { user: teamUser, member: null },
-    { user: { ...teamUser, subscriptionTier: "individual" }, member: membership },
-    { user: { ...teamUser, subscriptionExpiry: new Date(Date.now() - 1_000) }, member: membership },
+    { user: teamUser, member: null, reason: "TEAM_MEMBERSHIP_REMOVED" as const },
+    { user: { ...teamUser, subscriptionTier: "individual" }, member: membership, reason: "TEAM_PLAN_DOWNGRADED" as const },
+    { user: { ...teamUser, subscriptionExpiry: new Date(Date.now() - 1_000) }, member: membership, reason: "TEAM_SUBSCRIPTION_EXPIRED" as const },
   ];
 
-  cases.forEach(({ user, member }, index) => {
+  cases.forEach(({ user, member, reason }, index) => {
     const tracked = trackedSocket();
     const userId = 200 + index;
     hub.addSubscriber(12, userId, tracked.socket);
     assert.equal(canAccessTeamProject(user, member), false);
-    hub.revokeAccess(userId, 12);
-    assert.deepEqual(tracked.closes, [{ code: 4403, reason: "TEAM_ACCESS_REVOKED" }]);
+    assert.equal(teamAccessRevocationReason(user, Boolean(member)), reason);
+    hub.revokeAccess(userId, 12, reason);
+    assert.deepEqual(tracked.closes, [{ code: 4403, reason }]);
+    assert.notEqual(teamAccessRevocationMessage(reason), teamAccessRevocationMessage(""));
   });
+});
+
+test("safe revocation reasons survive cross-server pub/sub serialization", () => {
+  for (const reason of [
+    "TEAM_MEMBERSHIP_REMOVED",
+    "TEAM_PLAN_DOWNGRADED",
+    "TEAM_SUBSCRIPTION_EXPIRED",
+  ] as const) {
+    assert.deepEqual(parsePubSubEvent(JSON.stringify({
+      type: "access.revoked",
+      userId: 201,
+      projectId: 12,
+      reason,
+    })), {
+      type: "access.revoked",
+      userId: 201,
+      projectId: 12,
+      reason,
+    });
+  }
+  assert.equal(parsePubSubEvent(JSON.stringify({
+    type: "access.revoked",
+    userId: 201,
+    projectId: 12,
+    reason: "PRIVATE_ACCOUNT_DETAIL",
+  })), null);
 });
 
 test("Study Hub never auto-reconnects after the security close code", () => {

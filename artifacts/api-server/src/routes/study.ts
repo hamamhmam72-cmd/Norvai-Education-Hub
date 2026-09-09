@@ -697,7 +697,7 @@ router.delete("/team/projects/:id/members/:userId", requireAuth, async (req, res
     eq(teamProjectMembersTable.projectId, projectId),
     eq(teamProjectMembersTable.userId, userId),
   ));
-  revokeTeamRealtimeAccess(userId, projectId);
+  revokeTeamRealtimeAccess(userId, projectId, "TEAM_MEMBERSHIP_REMOVED");
   res.status(204).end();
 });
 
