@@ -15,6 +15,7 @@ import {
 } from "../src/lib/team-realtime.ts";
 import {
   mergeTeamMessages,
+  parseTeamLiveEvent,
   shouldReconnectTeamSocket,
   teamAccessRevocationMessage,
   type TeamMessage,
@@ -140,6 +141,47 @@ test("reconnect rehydration and live delivery do not duplicate persisted message
     [message(2), message(3)],
   );
   assert.deepEqual(merged.map((item) => item.id), [1, 2, 3]);
+});
+
+test("malformed live updates are ignored and later valid updates still apply", () => {
+  const payloads = [
+    "{not-json",
+    JSON.stringify({ type: "unknown", projectId: 12 }),
+    JSON.stringify({ type: "message.created", projectId: 12, message: { id: 2 } }),
+    JSON.stringify({
+      type: "code.updated",
+      projectId: 12,
+      code: { sharedCode: 42, codeLanguage: "TypeScript", codeVersion: 2, updatedAt: "now" },
+    }),
+    JSON.stringify({ type: "message.created", projectId: 13, message: message(2) }),
+    JSON.stringify({ type: "message.created", projectId: 12, message: message(2) }),
+    JSON.stringify({
+      type: "code.updated",
+      projectId: 12,
+      code: {
+        sharedCode: "const safe = true;",
+        codeLanguage: "TypeScript",
+        codeVersion: 2,
+        updatedAt: "2026-09-08T00:00:02.000Z",
+      },
+    }),
+  ];
+  let messages: TeamMessage[] = [];
+  let code = "";
+  for (const payload of payloads) {
+    const event = parseTeamLiveEvent(payload, 12);
+    if (event?.type === "message.created") {
+      messages = mergeTeamMessages(messages, [event.message]);
+    }
+    if (event?.type === "code.updated") code = event.code.sharedCode;
+  }
+
+  assert.deepEqual(messages.map((item) => item.id), [2]);
+  assert.equal(code, "const safe = true;");
+  assert.deepEqual(parseTeamLiveEvent(JSON.stringify({ type: "ready", projectId: 12 }), 12), {
+    type: "ready",
+    projectId: 12,
+  });
 });
 
 test("simultaneous saves accept one version and return the current version to the stale editor", async () => {

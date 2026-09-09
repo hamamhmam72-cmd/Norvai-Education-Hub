@@ -8,6 +8,68 @@ export interface TeamMessage {
   createdAt: string;
 }
 
+export interface TeamCodeUpdate {
+  sharedCode: string;
+  codeLanguage: string;
+  codeVersion: number;
+  updatedAt: string;
+}
+
+export type TeamLiveEvent =
+  | { type: "ready"; projectId: number }
+  | { type: "message.created"; projectId: number; message: TeamMessage }
+  | { type: "code.updated"; projectId: number; code: TeamCodeUpdate };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isTeamMessage(value: unknown): value is TeamMessage {
+  if (!isRecord(value)) return false;
+  return Number.isInteger(value.id)
+    && Number(value.id) > 0
+    && Number.isInteger(value.userId)
+    && Number(value.userId) > 0
+    && (value.content === null || typeof value.content === "string")
+    && (value.imageUrl === null || typeof value.imageUrl === "string")
+    && typeof value.createdAt === "string"
+    && (value.username === undefined || typeof value.username === "string")
+    && (value.fullName === undefined || typeof value.fullName === "string");
+}
+
+function isTeamCodeUpdate(value: unknown): value is TeamCodeUpdate {
+  if (!isRecord(value)) return false;
+  return typeof value.sharedCode === "string"
+    && typeof value.codeLanguage === "string"
+    && value.codeLanguage.length > 0
+    && Number.isInteger(value.codeVersion)
+    && Number(value.codeVersion) >= 0
+    && typeof value.updatedAt === "string";
+}
+
+export function parseTeamLiveEvent(
+  payload: unknown,
+  expectedProjectId?: number,
+): TeamLiveEvent | null {
+  try {
+    const value: unknown = typeof payload === "string" ? JSON.parse(payload) : payload;
+    if (!isRecord(value)) return null;
+    const projectId = value.projectId;
+    if (!Number.isInteger(projectId) || Number(projectId) <= 0) return null;
+    if (expectedProjectId !== undefined && projectId !== expectedProjectId) return null;
+    if (value.type === "ready") return { type: value.type, projectId: Number(projectId) };
+    if (value.type === "message.created" && isTeamMessage(value.message)) {
+      return { type: value.type, projectId: Number(projectId), message: value.message };
+    }
+    if (value.type === "code.updated" && isTeamCodeUpdate(value.code)) {
+      return { type: value.type, projectId: Number(projectId), code: value.code };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function shouldReconnectTeamSocket(closeCode: number) {
   return closeCode !== 4403;
 }

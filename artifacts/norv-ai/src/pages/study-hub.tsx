@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   mergeTeamMessages,
+  parseTeamLiveEvent,
   shouldReconnectTeamSocket,
   teamAccessRevocationMessage,
   type TeamMessage,
@@ -350,7 +351,11 @@ function TeamWorkspace() {
       };
       socket.onmessage = (event) => {
         if (stopped) return;
-        const update = JSON.parse(event.data);
+        const update = parseTeamLiveEvent(event.data, Number(projectId));
+        if (!update) {
+          console.warn("Ignored malformed Team realtime event");
+          return;
+        }
         if (update.type === "message.created") mergeMessage(update.message);
         if (update.type === "code.updated") {
           const next = update.code as TeamCode;
