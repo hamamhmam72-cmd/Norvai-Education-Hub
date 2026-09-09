@@ -9,6 +9,11 @@ import {
 } from "../src/lib/team-collaboration.ts";
 import { createTeamRealtimeHub } from "../src/lib/team-realtime-hub.ts";
 import {
+  getTeamEntitlementCheckTelemetry,
+  recordTeamEntitlementCheck,
+  teamEntitlementDurationBucket,
+} from "../src/lib/logger.ts";
+import {
   nextEntitlementCheckDelay,
   parsePubSubEvent,
   teamAccessRevocationReason,
@@ -133,6 +138,43 @@ test("project entitlement checks are jittered instead of firing in one synchroni
   assert.equal(nextEntitlementCheckDelay(1), 18_000);
   assert.equal(nextEntitlementCheckDelay(-1), 12_000);
   assert.equal(nextEntitlementCheckDelay(2), 18_000);
+});
+
+test("entitlement timing uses bounded buckets and warns only after sustained latency", () => {
+  assert.equal(teamEntitlementDurationBucket(1), "under_10_ms");
+  assert.equal(teamEntitlementDurationBucket(10), "10_to_49_ms");
+  assert.equal(teamEntitlementDurationBucket(50), "50_to_199_ms");
+  assert.equal(teamEntitlementDurationBucket(200), "200_ms_or_more");
+
+  const before = getTeamEntitlementCheckTelemetry().periodic;
+  const first = recordTeamEntitlementCheck({
+    source: "periodic",
+    durationMs: 250,
+    memberCount: 500,
+  });
+  const second = recordTeamEntitlementCheck({
+    source: "periodic",
+    durationMs: 300,
+    memberCount: 500,
+  });
+  const third = recordTeamEntitlementCheck({
+    source: "periodic",
+    durationMs: 400,
+    memberCount: 500,
+  });
+  const after = getTeamEntitlementCheckTelemetry().periodic;
+
+  assert.equal(first.sustainedSlowdown, false);
+  assert.equal(second.sustainedSlowdown, false);
+  assert.equal(third.sustainedSlowdown, true);
+  assert.equal(after.checkedProjects, before.checkedProjects + 3);
+  assert.equal(after.checkedMembers, before.checkedMembers + 1_500);
+  assert.equal(
+    after.durationBuckets["200_ms_or_more"],
+    before.durationBuckets["200_ms_or_more"] + 3,
+  );
+  recordTeamEntitlementCheck({ source: "periodic", durationMs: 5, memberCount: 1 });
+  assert.equal(getTeamEntitlementCheckTelemetry().periodic.consecutiveSlowChecks, 0);
 });
 
 test("reconnect rehydration and live delivery do not duplicate persisted messages", () => {

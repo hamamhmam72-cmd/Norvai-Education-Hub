@@ -96,3 +96,92 @@ export function recordAbuseCleanupTelemetry(sample: AbuseCleanupTelemetry) {
     logger.info(bindings, "Abuse-counter cleanup telemetry sampled");
   }
 }
+
+export type TeamEntitlementCheckSource = "periodic" | "pre_broadcast";
+export type TeamEntitlementDurationBucket =
+  | "under_10_ms"
+  | "10_to_49_ms"
+  | "50_to_199_ms"
+  | "200_ms_or_more";
+
+type TeamEntitlementCheckTelemetry = {
+  checkedProjects: number;
+  checkedMembers: number;
+  durationBuckets: Record<TeamEntitlementDurationBucket, number>;
+  consecutiveSlowChecks: number;
+};
+
+function emptyEntitlementCheckTelemetry(): TeamEntitlementCheckTelemetry {
+  return {
+    checkedProjects: 0,
+    checkedMembers: 0,
+    durationBuckets: {
+      under_10_ms: 0,
+      "10_to_49_ms": 0,
+      "50_to_199_ms": 0,
+      "200_ms_or_more": 0,
+    },
+    consecutiveSlowChecks: 0,
+  };
+}
+
+const teamEntitlementCheckTelemetry: Record<
+  TeamEntitlementCheckSource,
+  TeamEntitlementCheckTelemetry
+> = {
+  periodic: emptyEntitlementCheckTelemetry(),
+  pre_broadcast: emptyEntitlementCheckTelemetry(),
+};
+
+export function teamEntitlementDurationBucket(durationMs: number): TeamEntitlementDurationBucket {
+  if (durationMs < 10) return "under_10_ms";
+  if (durationMs < 50) return "10_to_49_ms";
+  if (durationMs < 200) return "50_to_199_ms";
+  return "200_ms_or_more";
+}
+
+export function recordTeamEntitlementCheck(input: {
+  source: TeamEntitlementCheckSource;
+  durationMs: number;
+  memberCount: number;
+}) {
+  const telemetry = teamEntitlementCheckTelemetry[input.source];
+  const bucket = teamEntitlementDurationBucket(input.durationMs);
+  telemetry.checkedProjects += 1;
+  telemetry.checkedMembers += input.memberCount;
+  telemetry.durationBuckets[bucket] += 1;
+  telemetry.consecutiveSlowChecks = bucket === "200_ms_or_more"
+    ? telemetry.consecutiveSlowChecks + 1
+    : 0;
+
+  const sustainedSlowdown = telemetry.consecutiveSlowChecks === 3
+    || (telemetry.consecutiveSlowChecks > 3 && telemetry.consecutiveSlowChecks % 10 === 0);
+  if (sustainedSlowdown) {
+    logger.warn(
+      {
+        telemetry: "team_entitlement_checks",
+        metric: "sustained_latency",
+        source: input.source,
+        durationBucket: bucket,
+        checkedProjects: 1,
+        checkedMembers: input.memberCount,
+        consecutiveSlowChecks: telemetry.consecutiveSlowChecks,
+      },
+      "Team entitlement checks are consistently slow",
+    );
+  }
+  return { bucket, sustainedSlowdown };
+}
+
+export function getTeamEntitlementCheckTelemetry() {
+  return {
+    periodic: {
+      ...teamEntitlementCheckTelemetry.periodic,
+      durationBuckets: { ...teamEntitlementCheckTelemetry.periodic.durationBuckets },
+    },
+    preBroadcast: {
+      ...teamEntitlementCheckTelemetry.pre_broadcast,
+      durationBuckets: { ...teamEntitlementCheckTelemetry.pre_broadcast.durationBuckets },
+    },
+  };
+}

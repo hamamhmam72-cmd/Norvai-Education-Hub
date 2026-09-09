@@ -11,8 +11,11 @@ import {
 import { verifyToken } from "./jwt.js";
 import {
   getTeamRealtimeTelemetry,
+  getTeamEntitlementCheckTelemetry,
   logger,
+  recordTeamEntitlementCheck,
   recordTeamRealtimeTelemetry,
+  type TeamEntitlementCheckSource,
 } from "./logger.js";
 import { canAccessTeamProject } from "./team-collaboration.js";
 import {
@@ -94,22 +97,42 @@ export function nextEntitlementCheckDelay(randomValue = Math.random()) {
   return Math.round(entitlementCheckIntervalMs * (1 + jitter));
 }
 
-async function revalidateProjectSubscribers(projectId: number) {
+async function revalidateProjectSubscribers(
+  projectId: number,
+  source: TeamEntitlementCheckSource,
+) {
   const userIds = realtimeHub.subscriberUserIds(projectId);
   if (userIds.length === 0) return;
-  const entitlements = await db.select({
-    userId: usersTable.id,
-    role: usersTable.role,
-    subscriptionActive: usersTable.subscriptionActive,
-    subscriptionTier: usersTable.subscriptionTier,
-    subscriptionExpiry: usersTable.subscriptionExpiry,
-    membershipId: teamProjectMembersTable.id,
-  }).from(usersTable)
-    .leftJoin(teamProjectMembersTable, and(
-      eq(teamProjectMembersTable.userId, usersTable.id),
-      eq(teamProjectMembersTable.projectId, projectId),
-    ))
-    .where(inArray(usersTable.id, userIds));
+  const startedAt = performance.now();
+  let entitlements: Array<{
+    userId: number;
+    role: string;
+    subscriptionActive: boolean;
+    subscriptionTier: string;
+    subscriptionExpiry: Date | null;
+    membershipId: number | null;
+  }>;
+  try {
+    entitlements = await db.select({
+      userId: usersTable.id,
+      role: usersTable.role,
+      subscriptionActive: usersTable.subscriptionActive,
+      subscriptionTier: usersTable.subscriptionTier,
+      subscriptionExpiry: usersTable.subscriptionExpiry,
+      membershipId: teamProjectMembersTable.id,
+    }).from(usersTable)
+      .leftJoin(teamProjectMembersTable, and(
+        eq(teamProjectMembersTable.userId, usersTable.id),
+        eq(teamProjectMembersTable.projectId, projectId),
+      ))
+      .where(inArray(usersTable.id, userIds));
+  } finally {
+    recordTeamEntitlementCheck({
+      source,
+      durationMs: performance.now() - startedAt,
+      memberCount: userIds.length,
+    });
+  }
   const authorized = new Set<number>();
   for (const entitlement of entitlements) {
     if (canAccessTeamProject(entitlement, entitlement.membershipId ? { id: entitlement.membershipId } : null)) {
@@ -129,7 +152,7 @@ async function revalidateProjectSubscribers(projectId: number) {
 
 async function emitToLocalSubscribers(event: TeamEvent) {
   try {
-    await revalidateProjectSubscribers(event.projectId);
+    await revalidateProjectSubscribers(event.projectId, "pre_broadcast");
     realtimeHub.broadcast(event);
   } catch (error) {
     logger.error({ err: error, projectId: event.projectId }, "Team broadcast authorization check failed");
@@ -337,6 +360,7 @@ export type TeamRealtimeHealth = {
   reconnectAttempts: number;
   publishFailures: number;
   hydrationFailures: number;
+  entitlementChecks: ReturnType<typeof getTeamEntitlementCheckTelemetry>;
 };
 
 export function getTeamRealtimeHealth(): TeamRealtimeHealth {
@@ -347,6 +371,7 @@ export function getTeamRealtimeHealth(): TeamRealtimeHealth {
     reconnectAttempts: telemetry.reconnect_attempts,
     publishFailures: telemetry.publish_failures,
     hydrationFailures: telemetry.hydration_failures,
+    entitlementChecks: getTeamEntitlementCheckTelemetry(),
   };
 }
 
@@ -365,7 +390,7 @@ export function attachTeamRealtime(server: Server) {
     monitor.timer = setTimeout(async () => {
       monitor.timer = null;
       try {
-        await revalidateProjectSubscribers(projectId);
+        await revalidateProjectSubscribers(projectId, "periodic");
       } catch (error) {
         logger.error({ err: error, projectId }, "Team realtime entitlement recheck failed");
       } finally {

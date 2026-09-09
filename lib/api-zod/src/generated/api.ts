@@ -17,6 +17,34 @@ export const healthCheckResponseTeamRealtimePublishFailuresMin = 0;
 
 export const healthCheckResponseTeamRealtimeHydrationFailuresMin = 0;
 
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicCheckedProjectsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicCheckedMembersMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBucketsUnder10MsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBuckets10To49MsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBuckets50To199MsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBuckets200MsOrMoreMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPeriodicConsecutiveSlowChecksMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastCheckedProjectsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastCheckedMembersMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBucketsUnder10MsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBuckets10To49MsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBuckets50To199MsMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBuckets200MsOrMoreMin = 0;
+
+export const healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastConsecutiveSlowChecksMin = 0;
+
 export const healthCheckResponseTeamMessageLimitsStoreFailuresMin = 0;
 
 
@@ -28,7 +56,31 @@ export const HealthCheckResponse = zod.object({
   "pubSubListener": zod.enum(['connected', 'disconnected']),
   "reconnectAttempts": zod.number().min(healthCheckResponseTeamRealtimeReconnectAttemptsMin),
   "publishFailures": zod.number().min(healthCheckResponseTeamRealtimePublishFailuresMin),
-  "hydrationFailures": zod.number().min(healthCheckResponseTeamRealtimeHydrationFailuresMin)
+  "hydrationFailures": zod.number().min(healthCheckResponseTeamRealtimeHydrationFailuresMin),
+  "entitlementChecks": zod.object({
+  "periodic": zod.object({
+  "checkedProjects": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicCheckedProjectsMin),
+  "checkedMembers": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicCheckedMembersMin),
+  "durationBuckets": zod.object({
+  "under_10_ms": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBucketsUnder10MsMin),
+  "10_to_49_ms": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBuckets10To49MsMin),
+  "50_to_199_ms": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBuckets50To199MsMin),
+  "200_ms_or_more": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicDurationBuckets200MsOrMoreMin)
+}),
+  "consecutiveSlowChecks": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPeriodicConsecutiveSlowChecksMin)
+}),
+  "preBroadcast": zod.object({
+  "checkedProjects": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastCheckedProjectsMin),
+  "checkedMembers": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastCheckedMembersMin),
+  "durationBuckets": zod.object({
+  "under_10_ms": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBucketsUnder10MsMin),
+  "10_to_49_ms": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBuckets10To49MsMin),
+  "50_to_199_ms": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBuckets50To199MsMin),
+  "200_ms_or_more": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastDurationBuckets200MsOrMoreMin)
+}),
+  "consecutiveSlowChecks": zod.number().min(healthCheckResponseTeamRealtimeEntitlementChecksPreBroadcastConsecutiveSlowChecksMin)
+})
+})
 }),
   "teamMessageLimits": zod.object({
   "storeFailures": zod.number().min(healthCheckResponseTeamMessageLimitsStoreFailuresMin)

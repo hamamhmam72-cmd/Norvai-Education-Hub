@@ -1043,6 +1043,7 @@ components:
             - reconnectAttempts
             - publishFailures
             - hydrationFailures
+            - entitlementChecks
           properties:
             websocket:
               type: string
@@ -1059,6 +1060,14 @@ components:
             hydrationFailures:
               type: number
               minimum: 0
+            entitlementChecks:
+              type: object
+              required: [periodic, preBroadcast]
+              properties:
+                periodic:
+                  $ref: "#/components/schemas/TeamEntitlementCheckTelemetry"
+                preBroadcast:
+                  $ref: "#/components/schemas/TeamEntitlementCheckTelemetry"
         teamMessageLimits:
           type: object
           required:
@@ -1067,6 +1076,36 @@ components:
             storeFailures:
               type: number
               minimum: 0
+
+    TeamEntitlementCheckTelemetry:
+      type: object
+      required: [checkedProjects, checkedMembers, durationBuckets, consecutiveSlowChecks]
+      properties:
+        checkedProjects:
+          type: number
+          minimum: 0
+        checkedMembers:
+          type: number
+          minimum: 0
+        durationBuckets:
+          type: object
+          required: [under_10_ms, 10_to_49_ms, 50_to_199_ms, 200_ms_or_more]
+          properties:
+            under_10_ms:
+              type: number
+              minimum: 0
+            10_to_49_ms:
+              type: number
+              minimum: 0
+            50_to_199_ms:
+              type: number
+              minimum: 0
+            200_ms_or_more:
+              type: number
+              minimum: 0
+        consecutiveSlowChecks:
+          type: number
+          minimum: 0
 
     ErrorResponse:
       type: object

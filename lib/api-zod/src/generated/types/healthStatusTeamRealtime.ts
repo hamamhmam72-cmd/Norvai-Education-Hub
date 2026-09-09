@@ -5,6 +5,7 @@
  * Norv_ai – Smart IT Learning Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { HealthStatusTeamRealtimeEntitlementChecks } from './healthStatusTeamRealtimeEntitlementChecks';
 import type { HealthStatusTeamRealtimePubSubListener } from './healthStatusTeamRealtimePubSubListener';
 import type { HealthStatusTeamRealtimeWebsocket } from './healthStatusTeamRealtimeWebsocket';
 
@@ -17,4 +18,5 @@ export type HealthStatusTeamRealtime = {
   publishFailures: number;
   /** @minimum 0 */
   hydrationFailures: number;
+  entitlementChecks: HealthStatusTeamRealtimeEntitlementChecks;
 };

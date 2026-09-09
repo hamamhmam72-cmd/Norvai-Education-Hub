@@ -28,6 +28,32 @@ export const HealthStatusTeamRealtimePubSubListener = {
   disconnected: 'disconnected',
 } as const;
 
+export type TeamEntitlementCheckTelemetryDurationBuckets = {
+  /** @minimum 0 */
+  under_10_ms: number;
+  /** @minimum 0 */
+  '10_to_49_ms': number;
+  /** @minimum 0 */
+  '50_to_199_ms': number;
+  /** @minimum 0 */
+  '200_ms_or_more': number;
+};
+
+export interface TeamEntitlementCheckTelemetry {
+  /** @minimum 0 */
+  checkedProjects: number;
+  /** @minimum 0 */
+  checkedMembers: number;
+  durationBuckets: TeamEntitlementCheckTelemetryDurationBuckets;
+  /** @minimum 0 */
+  consecutiveSlowChecks: number;
+}
+
+export type HealthStatusTeamRealtimeEntitlementChecks = {
+  periodic: TeamEntitlementCheckTelemetry;
+  preBroadcast: TeamEntitlementCheckTelemetry;
+};
+
 export type HealthStatusTeamRealtime = {
   websocket: HealthStatusTeamRealtimeWebsocket;
   pubSubListener: HealthStatusTeamRealtimePubSubListener;
@@ -37,6 +63,7 @@ export type HealthStatusTeamRealtime = {
   publishFailures: number;
   /** @minimum 0 */
   hydrationFailures: number;
+  entitlementChecks: HealthStatusTeamRealtimeEntitlementChecks;
 };
 
 export type HealthStatusTeamMessageLimits = {
