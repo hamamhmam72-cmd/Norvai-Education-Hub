@@ -59,7 +59,7 @@ function readBody(response: import("node:http").IncomingMessage): Promise<string
   });
 }
 
-function postMessage(server: Server): Promise<HttpResponse> {
+function postMessage(server: Server, body: unknown = { content: "A valid team message" }): Promise<HttpResponse> {
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Test server did not expose a port");
   return new Promise((resolve, reject) => {
@@ -84,10 +84,51 @@ function postMessage(server: Server): Promise<HttpResponse> {
       }
     });
     req.on("error", reject);
-    req.write(JSON.stringify({ content: "A valid team message" }));
+    req.write(JSON.stringify(body));
     req.end();
   });
 }
+
+test("invalid message payloads return 400 without consuming the shared quota", async () => {
+  let consumed = 0;
+  let inserts = 0;
+  const server = await startTestServer({
+    consumeLimit: async () => {
+      consumed += 1;
+      return consumed <= 30;
+    },
+    createMessage: async (input) => {
+      inserts += 1;
+      return { id: inserts, ...input, createdAt: new Date().toISOString() };
+    },
+  });
+
+  try {
+    for (const body of [
+      {},
+      { content: "   " },
+      { content: 42 },
+      { imageUrl: "/objects/not-an-object-id" },
+      { imageUrl: "https://example.com/image.png" },
+    ]) {
+      const response = await postMessage(server, body);
+      assert.equal(response.status, 400);
+      assert.deepEqual(response.body, { error: "A message or image is required" });
+    }
+    assert.equal(consumed, 0);
+    assert.equal(inserts, 0);
+
+    for (let index = 0; index < 30; index += 1) {
+      const response = await postMessage(server);
+      assert.equal(response.status, 201);
+    }
+    assert.equal(consumed, 30);
+    assert.equal(inserts, 30);
+    assert.equal((await postMessage(server)).status, 429);
+  } finally {
+    await closeServer(server);
+  }
+});
 
 test("returns the existing 429 contract after 30 accepted messages", async () => {
   let consumed = 0;

@@ -585,6 +585,10 @@ export function createTeamMessageHandler({
   const projectId = Number(req.params.id);
   const membership = Number.isInteger(projectId) ? await getMembership(req.user!.userId, projectId) : null;
   if (!membership) { res.status(403).json({ error: "An active Team plan and project membership are required" }); return; }
+  const content = textField(req.body?.content, 2_000);
+  const imageUrl = typeof req.body?.imageUrl === "string" && /^\/objects\/[0-9a-f-]{36}$/i.test(req.body.imageUrl)
+    ? req.body.imageUrl : null;
+  if (!content && !imageUrl) { res.status(400).json({ error: "A message or image is required" }); return; }
   let messageAllowed: boolean;
   try {
     messageAllowed = await consumeLimit(req.user!.userId);
@@ -601,10 +605,6 @@ export function createTeamMessageHandler({
     res.status(429).json({ error: "Message limit reached. Try again shortly." });
     return;
   }
-  const content = textField(req.body?.content, 2_000);
-  const imageUrl = typeof req.body?.imageUrl === "string" && /^\/objects\/[0-9a-f-]{36}$/i.test(req.body.imageUrl)
-    ? req.body.imageUrl : null;
-  if (!content && !imageUrl) { res.status(400).json({ error: "A message or image is required" }); return; }
   const message = await createMessage({
     projectId,
     userId: req.user!.userId,
