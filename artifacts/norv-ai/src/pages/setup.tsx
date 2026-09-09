@@ -73,7 +73,7 @@ export default function Setup() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center px-4 py-8 sm:p-4">
       <div className="w-full max-w-2xl">
         <div className="mb-8 flex items-center justify-center gap-2">
           <BrainCircuit className="size-8 text-primary" />
@@ -84,7 +84,7 @@ export default function Setup() {
           {step > 1 && step < 4 && (
             <Progress value={progress} className="h-1.5 rounded-none rounded-t-lg bg-muted/50" />
           )}
-          <CardContent className="p-8 md:p-12">
+          <CardContent className="p-5 sm:p-8 md:p-12">
             
             {/* Step 1: Welcome */}
             {step === 1 && (
@@ -115,17 +115,21 @@ export default function Setup() {
                 
                   <div className="space-y-4 pt-4">
                    <div className="grid gap-4 sm:grid-cols-2">
-                     <div className="space-y-2">
-                       <Label className="flex items-center gap-2"><MapPin className="size-4 text-primary" />Governorate</Label>
-                       <Select value={formData.governorate} onValueChange={(governorate) => setFormData({...formData, governorate})}>
-                         <SelectTrigger><SelectValue placeholder="Select governorate" /></SelectTrigger>
+                       <div className="space-y-2">
+                        <Label htmlFor="governorate" className="flex items-center gap-2"><MapPin className="size-4 text-primary" />Governorate</Label>
+                        <Select value={formData.governorate} onValueChange={(governorate) => setFormData({...formData, governorate})}>
+                          <SelectTrigger id="governorate">
+                            <SelectValue placeholder="Select governorate" />
+                          </SelectTrigger>
                          <SelectContent>{JORDAN_GOVERNORATES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                        </Select>
                      </div>
                      <div className="space-y-2">
-                       <Label className="flex items-center gap-2"><University className="size-4 text-primary" />University</Label>
+                        <Label htmlFor="university" className="flex items-center gap-2"><University className="size-4 text-primary" />University</Label>
                        <Select value={formData.university} onValueChange={(university) => setFormData({...formData, university})}>
-                         <SelectTrigger><SelectValue placeholder="Select university" /></SelectTrigger>
+                          <SelectTrigger id="university">
+                            <SelectValue placeholder="Select university" />
+                          </SelectTrigger>
                          <SelectContent>{JORDANIAN_UNIVERSITIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                        </Select>
                      </div>

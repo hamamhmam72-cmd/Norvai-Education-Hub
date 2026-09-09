@@ -33,7 +33,7 @@ export const JORDANIAN_UNIVERSITIES = [
   "Middle East University",
   "Amman Arab University",
   "Jadara University",
-  "Jordon University College",
+  "Jordan University College",
   "American University of Madaba",
   "Aqaba University of Technology",
   "Other Jordanian university",
