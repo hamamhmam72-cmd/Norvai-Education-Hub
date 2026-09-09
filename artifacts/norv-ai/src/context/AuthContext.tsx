@@ -14,14 +14,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [initialToken] = useState(() => localStorage.getItem("norv_token"));
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem("norv_token"));
+  const [token, setToken] = useState<string | null>(initialToken);
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     async function restoreSession() {
-      if (token) {
+      if (initialToken) {
         try {
           const fetchedUser = await getMe();
           setUser(fetchedUser);
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
     restoreSession();
-  }, [token]);
+  }, [initialToken]);
 
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem("norv_token", newToken);

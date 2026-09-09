@@ -86,8 +86,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user && !isPublicRoute) return <Redirect to="/login" replace />;
-  if (user && !user.setupComplete && !isSetupRoute && !isPublicRoute) return <Redirect to="/setup" replace />;
-  if (user && user.setupComplete && isPublicRoute) return <Redirect to="/dashboard" replace />;
+  if (user && !user.setupComplete && !isSetupRoute) return <Redirect to="/setup" replace />;
+  if (user && user.setupComplete && (isPublicRoute || isSetupRoute)) return <Redirect to="/dashboard" replace />;
 
   if (isPublicRoute || isSetupRoute) {
     return (
