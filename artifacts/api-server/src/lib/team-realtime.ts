@@ -97,6 +97,16 @@ export function nextEntitlementCheckDelay(randomValue = Math.random()) {
   return Math.round(entitlementCheckIntervalMs * (1 + jitter));
 }
 
+export function teamRoomFullHttpResponse() {
+  const body = "Team room is full. Retry in a few seconds.\n";
+  return "HTTP/1.1 503 Service Unavailable\r\n"
+    + "Connection: close\r\n"
+    + "Retry-After: 15\r\n"
+    + "Content-Type: text/plain; charset=utf-8\r\n"
+    + `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n`
+    + body;
+}
+
 async function revalidateProjectSubscribers(
   projectId: number,
   source: TeamEntitlementCheckSource,
@@ -445,9 +455,18 @@ export function attachTeamRealtime(server: Server) {
         )).limit(1);
       const entitled = canAccessTeamProject(user, membership);
       if (!entitled) throw new Error("Forbidden");
+      if (!realtimeHub.hasCapacity(projectId)) {
+        socket.write(teamRoomFullHttpResponse());
+        socket.destroy();
+        return;
+      }
 
       wss.handleUpgrade(request, socket, head, (ws) => {
         const removeSubscriber = realtimeHub.addSubscriber(projectId, identity.userId, ws);
+        if (!removeSubscriber) {
+          ws.close(1013, "TEAM_ROOM_FULL");
+          return;
+        }
         let cleanedUp = false;
         let expiryTimer: NodeJS.Timeout | null = null;
         acquireProjectEntitlementMonitor(projectId);

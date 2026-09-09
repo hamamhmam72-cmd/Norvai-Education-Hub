@@ -9,13 +9,26 @@ export type TeamAccessRevocationReason =
   | "TEAM_PLAN_DOWNGRADED"
   | "TEAM_SUBSCRIPTION_EXPIRED";
 
-export function createTeamRealtimeHub() {
+/**
+ * Capacity was validated against the representative 500-member entitlement
+ * query. Bounding sockets also bounds broadcast fan-out and query parameters.
+ */
+export const MAX_TEAM_PROJECT_SOCKETS = 500;
+
+export function createTeamRealtimeHub(maxProjectSockets = MAX_TEAM_PROJECT_SOCKETS) {
+  if (!Number.isInteger(maxProjectSockets) || maxProjectSockets < 1) {
+    throw new Error("Team project socket limit must be a positive integer");
+  }
   type Subscriber = { userId: number; socket: WebSocket };
   const subscribers = new Map<number, Set<Subscriber>>();
 
   return {
+    hasCapacity(projectId: number) {
+      return (subscribers.get(projectId)?.size ?? 0) < maxProjectSockets;
+    },
     addSubscriber(projectId: number, userId: number, socket: WebSocket) {
       const projectSubscribers = subscribers.get(projectId) ?? new Set<Subscriber>();
+      if (projectSubscribers.size >= maxProjectSockets) return null;
       const subscriber = { userId, socket };
       projectSubscribers.add(subscriber);
       subscribers.set(projectId, projectSubscribers);

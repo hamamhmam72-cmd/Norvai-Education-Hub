@@ -17,6 +17,7 @@ import {
   nextEntitlementCheckDelay,
   parsePubSubEvent,
   teamAccessRevocationReason,
+  teamRoomFullHttpResponse,
 } from "../src/lib/team-realtime.ts";
 import {
   mergeTeamMessages,
@@ -78,6 +79,45 @@ test("revoked Team access closes once, blocks later broadcasts, and permits manu
   hub.broadcast({ type: "message.created", projectId: 12, message: message(3) });
   assert.equal(restored.events.length, 1);
   assert.equal(first.events.length, 2);
+});
+
+test("Team room capacity rejects excess sockets and reopens after disconnect or revocation", () => {
+  const hub = createTeamRealtimeHub(2);
+  const first = trackedSocket();
+  const second = trackedSocket();
+  const excess = trackedSocket();
+
+  const removeFirst = hub.addSubscriber(12, 101, first.socket);
+  assert.ok(removeFirst);
+  assert.ok(hub.addSubscriber(12, 102, second.socket));
+  assert.equal(hub.subscriberCount(12), 2);
+  assert.equal(hub.hasCapacity(12), false);
+  assert.equal(hub.addSubscriber(12, 103, excess.socket), null);
+  assert.equal(excess.closes.length, 0);
+
+  removeFirst();
+  assert.equal(hub.hasCapacity(12), true);
+  assert.ok(hub.addSubscriber(12, 103, excess.socket));
+  assert.equal(hub.subscriberCount(12), 2);
+
+  hub.revokeAccess(102, 12, "TEAM_MEMBERSHIP_REMOVED");
+  assert.deepEqual(second.closes, [{ code: 4403, reason: "TEAM_MEMBERSHIP_REMOVED" }]);
+  assert.equal(hub.hasCapacity(12), true);
+  const reconnected = trackedSocket();
+  assert.ok(hub.addSubscriber(12, 104, reconnected.socket));
+  assert.equal(hub.subscriberCount(12), 2);
+});
+
+test("full Team rooms return a clear retryable WebSocket upgrade response", () => {
+  const response = teamRoomFullHttpResponse();
+  assert.match(response, /^HTTP\/1\.1 503 Service Unavailable\r\n/);
+  assert.match(response, /\r\nRetry-After: 15\r\n/);
+  const [headers, body] = response.split("\r\n\r\n");
+  assert.equal(body, "Team room is full. Retry in a few seconds.\n");
+  assert.match(headers ?? "", new RegExp(`Content-Length: ${Buffer.byteLength(body ?? "")}`));
+  assert.equal(response.includes("authorization"), false);
+  assert.equal(response.includes("token"), false);
+  assert.equal(response.includes("user"), false);
 });
 
 test("membership removal, subscription downgrade, and expiry carry distinct safe reasons", () => {
