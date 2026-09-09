@@ -15,6 +15,7 @@ import {
   AbuseRateLimitUnavailableError,
   ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE,
   createAbuseRateLimiter,
+  hasSustainedCleanupBacklog,
   recordAbuseRateLimitStoreUnavailable,
 } from "../src/lib/abuse-rate-limit.ts";
 import accessRouter from "../src/routes/access.ts";
@@ -252,6 +253,40 @@ test("bounded cleanup removes exact batches, drains backlog, and preserves concu
       .from(abuseRateLimitsTable)
       .where(eq(abuseRateLimitsTable.key, concurrentKey));
     assert.equal(concurrentCounter?.count, 21);
+  } finally {
+    await db.delete(abuseRateLimitsTable)
+      .where(like(abuseRateLimitsTable.key, `${cleanupPrefix}%`));
+  }
+});
+
+test("three consecutive full cleanup batches signal sustained backlog growth", async () => {
+  const cleanupPrefix = nextKey("cleanup-warning");
+  const now = new Date("2026-09-08T15:45:00.000Z");
+  const staleAt = new Date("2000-01-01T00:00:00.000Z");
+  const limiter = createAbuseRateLimiter(pooledDatabaseA);
+  try {
+    assert.equal(hasSustainedCleanupBacklog(2), false);
+    assert.equal(hasSustainedCleanupBacklog(3), true);
+    await db.insert(abuseRateLimitsTable).values(
+      Array.from({ length: ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE * 3 + 25 }, (_, index) => ({
+        key: `${cleanupPrefix}:stale:${index}`,
+        count: 1,
+        expiresAt: staleAt,
+        updatedAt: staleAt,
+      })),
+    );
+
+    for (let index = 0; index < 3; index += 1) {
+      assert.equal(
+        await limiter.allowAbuseRequest(`${cleanupPrefix}:active:${index}`, 10, 60_000, now),
+        true,
+      );
+    }
+    const [remaining] = await db.select({
+      count: sql<number>`count(*)::int`,
+    }).from(abuseRateLimitsTable)
+      .where(like(abuseRateLimitsTable.key, `${cleanupPrefix}:stale:%`));
+    assert.equal(Number(remaining?.count ?? 0), 25);
   } finally {
     await db.delete(abuseRateLimitsTable)
       .where(like(abuseRateLimitsTable.key, `${cleanupPrefix}%`));

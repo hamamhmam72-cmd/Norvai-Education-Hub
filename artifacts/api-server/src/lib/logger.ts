@@ -70,3 +70,29 @@ export function recordTeamMessageLimitStoreFailure() {
 export function getTeamMessageLimitTelemetry() {
   return { storeFailures: teamMessageLimitStoreFailures };
 }
+
+export type AbuseCleanupTelemetry = {
+  removedRows: number;
+  durationMs: number;
+  approximateLiveRows: number;
+  approximateDeadRows: number;
+  consecutiveFullBatches: number;
+  backlogLikely: boolean;
+};
+
+export function recordAbuseCleanupTelemetry(sample: AbuseCleanupTelemetry) {
+  const bindings = {
+    telemetry: "abuse_rate_limit_cleanup",
+    metric: sample.backlogLikely ? "backlog_growth" : "cleanup_sample",
+    removedRows: sample.removedRows,
+    durationMs: sample.durationMs,
+    approximateLiveRows: sample.approximateLiveRows,
+    approximateDeadRows: sample.approximateDeadRows,
+    consecutiveFullBatches: sample.consecutiveFullBatches,
+  };
+  if (sample.backlogLikely) {
+    logger.warn(bindings, "Expired abuse-counter backlog may be outgrowing bounded cleanup");
+  } else {
+    logger.info(bindings, "Abuse-counter cleanup telemetry sampled");
+  }
+}

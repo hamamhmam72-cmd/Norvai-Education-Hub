@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { abuseRateLimitsTable } from "@workspace/db/schema";
+import { recordAbuseCleanupTelemetry } from "./logger.js";
 
 export class AbuseRateLimitUnavailableError extends Error {
   constructor(cause: unknown) {
@@ -43,11 +44,22 @@ export function recordAbuseRateLimitStoreUnavailable(
 }
 
 export const ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE = 100;
+const CLEANUP_TELEMETRY_INTERVAL_MS = 60_000;
+const FULL_BATCH_WARNING_THRESHOLD = 3;
+let consecutiveFullCleanupBatches = 0;
+let nextCleanupTelemetryAt = 0;
+let nextCleanupBacklogWarningAt = 0;
+let cleanupTelemetryInFlight = false;
+
+export function hasSustainedCleanupBacklog(consecutiveFullBatches: number) {
+  return consecutiveFullBatches >= FULL_BATCH_WARNING_THRESHOLD;
+}
 
 async function cleanupExpiredCounters(database: typeof db, now: Date) {
   // Keep cleanup bounded so one protected request cannot scan/delete an
   // unbounded backlog. The expiry index makes the candidate selection cheap.
-  await database.execute(sql`
+  const startedAt = performance.now();
+  const result = await database.execute(sql`
     WITH expired AS (
       SELECT ${sql.raw('"key"')}
       FROM ${abuseRateLimitsTable}
@@ -57,7 +69,46 @@ async function cleanupExpiredCounters(database: typeof db, now: Date) {
     )
     DELETE FROM ${abuseRateLimitsTable}
     WHERE ${abuseRateLimitsTable.key} IN (SELECT ${sql.raw('"key"')} FROM expired)
+    RETURNING 1
   `);
+  const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
+  const removedRows = Number((result as unknown as { rowCount?: number }).rowCount ?? 0);
+  consecutiveFullCleanupBatches = removedRows === ABUSE_RATE_LIMIT_CLEANUP_BATCH_SIZE
+    ? consecutiveFullCleanupBatches + 1
+    : 0;
+  const cleanupBatchStreak = consecutiveFullCleanupBatches;
+  const backlogLikely = hasSustainedCleanupBacklog(cleanupBatchStreak);
+  const currentTime = Date.now();
+  const sampleDue = currentTime >= nextCleanupTelemetryAt;
+  const warningDue = backlogLikely && currentTime >= nextCleanupBacklogWarningAt;
+  if (!cleanupTelemetryInFlight && (sampleDue || warningDue)) {
+    cleanupTelemetryInFlight = true;
+    nextCleanupTelemetryAt = currentTime + CLEANUP_TELEMETRY_INTERVAL_MS;
+    if (warningDue) nextCleanupBacklogWarningAt = currentTime + CLEANUP_TELEMETRY_INTERVAL_MS;
+    void database.execute(sql`
+      SELECT
+        n_live_tup::bigint AS approximate_live_rows,
+        n_dead_tup::bigint AS approximate_dead_rows
+      FROM pg_stat_user_tables
+      WHERE relname = 'abuse_rate_limits'
+    `).then((statsResult) => {
+      const row = (statsResult as unknown as {
+        rows?: Array<{ approximate_live_rows?: string; approximate_dead_rows?: string }>;
+      }).rows?.[0];
+      recordAbuseCleanupTelemetry({
+        removedRows,
+        durationMs,
+        approximateLiveRows: Number(row?.approximate_live_rows ?? 0),
+        approximateDeadRows: Number(row?.approximate_dead_rows ?? 0),
+        consecutiveFullBatches: cleanupBatchStreak,
+        backlogLikely,
+      });
+    }).catch(() => {
+      // Telemetry is best-effort and must never weaken fail-closed limiting.
+    }).finally(() => {
+      cleanupTelemetryInFlight = false;
+    });
+  }
 }
 
 export function createAbuseRateLimiter(database: typeof db = db) {
