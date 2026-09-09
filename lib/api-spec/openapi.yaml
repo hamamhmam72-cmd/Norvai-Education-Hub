@@ -1030,7 +1030,7 @@ components:
   schemas:
     HealthStatus:
       type: object
-      required: [status, teamRealtime]
+      required: [status, teamRealtime, teamMessageLimits]
       properties:
         status:
           type: string
@@ -1057,6 +1057,14 @@ components:
               type: number
               minimum: 0
             hydrationFailures:
+              type: number
+              minimum: 0
+        teamMessageLimits:
+          type: object
+          required:
+            - storeFailures
+          properties:
+            storeFailures:
               type: number
               minimum: 0
 

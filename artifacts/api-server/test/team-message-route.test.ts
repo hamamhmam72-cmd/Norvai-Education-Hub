@@ -6,6 +6,7 @@ import { signToken } from "../src/lib/jwt.ts";
 import { TeamMessageRateLimitUnavailableError } from "../src/lib/team-message-rate-limit.ts";
 import { createTeamMessageHandler } from "../src/routes/study.ts";
 import { requireAuth } from "../src/middleware/auth.ts";
+import { getTeamMessageLimitTelemetry } from "../src/lib/logger.ts";
 
 type HttpResponse = {
   status: number;
@@ -158,6 +159,7 @@ test("returns the existing 429 contract after 30 accepted messages", async () =>
 
 test("fails closed with 503 and never inserts when the limiter store fails", async () => {
   let inserts = 0;
+  const failuresBefore = getTeamMessageLimitTelemetry().storeFailures;
   const server = await startTestServer({
     consumeLimit: async () => {
       throw new TeamMessageRateLimitUnavailableError(new Error("database unavailable"));
@@ -175,6 +177,7 @@ test("fails closed with 503 and never inserts when the limiter store fails", asy
       error: "Message limits are temporarily unavailable. Try again shortly.",
     });
     assert.equal(inserts, 0);
+    assert.equal(getTeamMessageLimitTelemetry().storeFailures, failuresBefore + 1);
   } finally {
     await closeServer(server);
   }

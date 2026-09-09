@@ -29,6 +29,7 @@ const teamRealtimeTelemetry: Record<TeamRealtimeTelemetryMetric, number> = {
   publish_failures: 0,
   hydration_failures: 0,
 };
+let teamMessageLimitStoreFailures = 0;
 
 /**
  * Record bounded, aggregate-only Team realtime telemetry. Keeping the counter
@@ -51,4 +52,21 @@ export function recordTeamRealtimeTelemetry(metric: TeamRealtimeTelemetryMetric)
 
 export function getTeamRealtimeTelemetry() {
   return { ...teamRealtimeTelemetry };
+}
+
+export function recordTeamMessageLimitStoreFailure() {
+  teamMessageLimitStoreFailures += 1;
+  logger.warn(
+    {
+      telemetry: "team_message_limits",
+      metric: "store_failures",
+      count: teamMessageLimitStoreFailures,
+    },
+    "Team message-limit telemetry counter incremented",
+  );
+  return teamMessageLimitStoreFailures;
+}
+
+export function getTeamMessageLimitTelemetry() {
+  return { storeFailures: teamMessageLimitStoreFailures };
 }

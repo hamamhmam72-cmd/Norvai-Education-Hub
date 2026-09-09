@@ -17,6 +17,8 @@ export const healthCheckResponseTeamRealtimePublishFailuresMin = 0;
 
 export const healthCheckResponseTeamRealtimeHydrationFailuresMin = 0;
 
+export const healthCheckResponseTeamMessageLimitsStoreFailuresMin = 0;
+
 
 
 export const HealthCheckResponse = zod.object({
@@ -27,6 +29,9 @@ export const HealthCheckResponse = zod.object({
   "reconnectAttempts": zod.number().min(healthCheckResponseTeamRealtimeReconnectAttemptsMin),
   "publishFailures": zod.number().min(healthCheckResponseTeamRealtimePublishFailuresMin),
   "hydrationFailures": zod.number().min(healthCheckResponseTeamRealtimeHydrationFailuresMin)
+}),
+  "teamMessageLimits": zod.object({
+  "storeFailures": zod.number().min(healthCheckResponseTeamMessageLimitsStoreFailuresMin)
 })
 })
 

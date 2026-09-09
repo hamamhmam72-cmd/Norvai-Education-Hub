@@ -30,6 +30,7 @@ import {
   AbuseRateLimitUnavailableError,
   recordAbuseRateLimitStoreUnavailable,
 } from "../lib/abuse-rate-limit.js";
+import { recordTeamMessageLimitStoreFailure } from "../lib/logger.js";
 
 const router = Router();
 const allowedMaterialTypes = new Set([
@@ -594,6 +595,7 @@ export function createTeamMessageHandler({
     messageAllowed = await consumeLimit(req.user!.userId);
   } catch (error) {
     if (error instanceof TeamMessageRateLimitUnavailableError) {
+      recordTeamMessageLimitStoreFailure();
       req.log?.error?.({ err: error, userId: req.user!.userId }, "Team message rate-limit store unavailable");
       res.status(503).json({ error: "Message limits are temporarily unavailable. Try again shortly." });
       return;

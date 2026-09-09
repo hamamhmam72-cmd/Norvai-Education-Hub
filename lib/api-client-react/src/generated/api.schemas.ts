@@ -39,9 +39,15 @@ export type HealthStatusTeamRealtime = {
   hydrationFailures: number;
 };
 
+export type HealthStatusTeamMessageLimits = {
+  /** @minimum 0 */
+  storeFailures: number;
+};
+
 export interface HealthStatus {
   status: HealthStatusStatus;
   teamRealtime: HealthStatusTeamRealtime;
+  teamMessageLimits: HealthStatusTeamMessageLimits;
 }
 
 export interface ErrorResponse {

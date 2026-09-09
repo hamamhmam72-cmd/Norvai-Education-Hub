@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HealthStatusStatus } from './healthStatusStatus';
+import type { HealthStatusTeamMessageLimits } from './healthStatusTeamMessageLimits';
 import type { HealthStatusTeamRealtime } from './healthStatusTeamRealtime';
 
 export interface HealthStatus {
   status: HealthStatusStatus;
   teamRealtime: HealthStatusTeamRealtime;
+  teamMessageLimits: HealthStatusTeamMessageLimits;
 }

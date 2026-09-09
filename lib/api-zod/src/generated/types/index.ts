@@ -37,6 +37,7 @@ export * from './getLecturesParams';
 export * from './getSubscriptionRequestsParams';
 export * from './healthStatus';
 export * from './healthStatusStatus';
+export * from './healthStatusTeamMessageLimits';
 export * from './healthStatusTeamRealtime';
 export * from './healthStatusTeamRealtimePubSubListener';
 export * from './healthStatusTeamRealtimeWebsocket';
