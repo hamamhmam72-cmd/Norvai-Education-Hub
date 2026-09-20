@@ -6,25 +6,25 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
-const httpLogger = pinoHttp({
-  logger,
-  serializers: {
-    req(req) {
-      return {
-        id: req.id,
-        method: req.method,
-        url: req.url?.split("?")[0],
-      };
+app.use(
+  pinoHttp({
+    logger,
+    serializers: {
+      req(req: any) {
+        return {
+          id: req.id,
+          method: req.method,
+          url: req.url?.split("?")[0],
+        };
+      },
+      res(res: any) {
+        return {
+          statusCode: res.statusCode,
+        };
+      },
     },
-    res(res) {
-      return {
-        statusCode: res.statusCode,
-      };
-    },
-  },
-});
-
-app.use(httpLogger);
+  })
+);
 
 app.use(cors());
 app.use(express.json());
