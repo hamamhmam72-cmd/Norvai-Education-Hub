@@ -23,9 +23,10 @@ async function buildAll() {
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     // ربط مسارات الـ workspace محلياً لضمان دمجها بالكامل أثناء البناء وتجنب خطأ الـ module مفقود
-    alias: {
-      "@workspace/db": path.resolve(artifactDir, "../../lib/db/src"),
-      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src")
+   alias: {
+      "@workspace/db": path.resolve(process.cwd(), "lib/db/src"),
+      "@workspace/api-zod": path.resolve(process.cwd(), "lib/api-zod/src")
+    },
     },
     external: [
       "*.node",
