@@ -4,34 +4,55 @@ import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
+import fs from "node:fs";
 
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
-// إضافة مخصصة لحل مسارات الـ workspace بكفاءة ودعم المسارات الفرعية
+// محلل ذكي يبحث عن الملف في عدة مسارات محتملة لتجنب أخطاء الفقدان
 const workspaceResolverPlugin = {
   name: "workspace-resolver",
   setup(build) {
     build.onResolve({ filter: /^@workspace\// }, (args) => {
       const subpath = args.path.replace(/^@workspace\//, "");
-      let targetPath;
+      
+      // قائمة المسارات المحتملة للبحث عن الملف بالترتيب
+      const possiblePaths = [];
 
       if (subpath === "db") {
-        targetPath = path.resolve(artifactDir, "../../lib/db/src/index.ts");
+        possiblePaths.push(
+          path.resolve(artifactDir, "../../lib/db/src/index.ts"),
+          path.resolve(artifactDir, "../../lib/db/index.ts")
+        );
       } else if (subpath === "db/schema") {
-        targetPath = path.resolve(artifactDir, "../../lib/db/src/schema.ts");
-      } else if (subpath.startsWith("db/")) {
-        targetPath = path.resolve(artifactDir, `../../lib/db/src/${subpath.replace("db/", "")}.ts`);
+        possiblePaths.push(
+          path.resolve(artifactDir, "../../lib/db/src/schema.ts"),
+          path.resolve(artifactDir, "../../lib/db/schema.ts"),
+          path.resolve(artifactDir, "../../lib/db/src/schema/index.ts")
+        );
       } else if (subpath === "api-zod") {
-        targetPath = path.resolve(artifactDir, "../../lib/api-zod/src/index.ts");
-      } else if (subpath.startsWith("api-zod/")) {
-        targetPath = path.resolve(artifactDir, `../../lib/api-zod/src/${subpath.replace("api-zod/", "")}.ts`);
+        possiblePaths.push(
+          path.resolve(artifactDir, "../../lib/api-zod/src/index.ts"),
+          path.resolve(artifactDir, "../../lib/api-zod/index.ts")
+        );
       } else {
-        targetPath = path.resolve(artifactDir, `../../lib/${subpath}`);
+        possiblePaths.push(
+          path.resolve(artifactDir, `../../lib/${subpath}.ts`),
+          path.resolve(artifactDir, `../../lib/${subpath}/index.ts`),
+          path.resolve(artifactDir, `../../lib/${subpath}`)
+        );
       }
 
-      return { path: targetPath };
+      // العثور على أول مسار موجود فعلياً على النظام
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          return { path: p };
+        }
+      }
+
+      // إذا لم يتم العثور عليه، أرجاع المسار الافتراضي الأول لتظهر رسالة خطأ واضحة
+      return { path: possiblePaths[0] };
     });
   },
 };
