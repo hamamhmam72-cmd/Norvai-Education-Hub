@@ -16,7 +16,7 @@ import {
 
 const router = Router();
 
-function safeUser(u: typeof usersTable.$inferSelect) {
+function safeUser(u: any) {
   return {
     id: u.id,
     username: u.username,
@@ -32,15 +32,15 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     knownLanguages: u.knownLanguages,
     avatarUrl: u.avatarUrl,
     accessActivated: u.accessActivated,
-    trialExpiresAt: u.trialExpiresAt?.toISOString() ?? null,
+    trialExpiresAt: u.trialExpiresAt ? new Date(u.trialExpiresAt).toISOString() : null,
     subscriptionActive: u.subscriptionActive,
-    subscriptionExpiry: u.subscriptionExpiry?.toISOString() ?? null,
-    createdAt: u.createdAt.toISOString(),
+    subscriptionExpiry: u.subscriptionExpiry ? new Date(u.subscriptionExpiry).toISOString() : null,
+    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
   };
 }
 
 // POST /api/auth/register
-router.post("/auth/register", async (req, res) => {
+router.post("/auth/register", async (req: any, res: any) => {
   const username = normalizeUsername(req.body?.username);
   const fullName = normalizeFullName(req.body?.fullName);
   const password = req.body?.password;
@@ -75,7 +75,7 @@ router.post("/auth/register", async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", async (req: any, res: any) => {
   const username = normalizeUsername(req.body?.username);
   const password = req.body?.password;
   if (!username || typeof password !== "string" || password.length > 72) {
@@ -96,13 +96,13 @@ router.post("/auth/login", async (req, res) => {
 });
 
 // POST /api/auth/logout
-router.post("/auth/logout", requireAuth, (_req, res) => {
+router.post("/auth/logout", requireAuth, (_req: any, res: any) => {
   res.json({ message: "Logged out" });
 });
 
 // GET /api/auth/me
-router.get("/auth/me", requireAuth, async (req, res) => {
-  const userId = (req as any).user?.userId;
+router.get("/auth/me", requireAuth, async (req: any, res: any) => {
+  const userId = req.user?.userId;
   const [user] = await db
     .select()
     .from(usersTable)
