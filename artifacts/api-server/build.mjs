@@ -10,49 +10,40 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
-// محلل ذكي يبحث عن الملف في عدة مسارات محتملة لتجنب أخطاء الفقدان
+// محلل ذكي يدمج حزم الـ workspace بالكامل داخل الملف النهائي
 const workspaceResolverPlugin = {
   name: "workspace-resolver",
   setup(build) {
     build.onResolve({ filter: /^@workspace\// }, (args) => {
       const subpath = args.path.replace(/^@workspace\//, "");
-      
-      // قائمة المسارات المحتملة للبحث عن الملف بالترتيب
-      const possiblePaths = [];
+      let targetPath;
 
       if (subpath === "db") {
-        possiblePaths.push(
-          path.resolve(artifactDir, "../../lib/db/src/index.ts"),
-          path.resolve(artifactDir, "../../lib/db/index.ts")
-        );
+        targetPath = path.resolve(artifactDir, "../../lib/db/src/index.ts");
       } else if (subpath === "db/schema") {
-        possiblePaths.push(
-          path.resolve(artifactDir, "../../lib/db/src/schema.ts"),
-          path.resolve(artifactDir, "../../lib/db/schema.ts"),
-          path.resolve(artifactDir, "../../lib/db/src/schema/index.ts")
-        );
+        targetPath = path.resolve(artifactDir, "../../lib/db/src/schema.ts");
+      } else if (subpath.startsWith("db/")) {
+        targetPath = path.resolve(artifactDir, `../../lib/db/src/${subpath.replace("db/", "")}.ts`);
       } else if (subpath === "api-zod") {
-        possiblePaths.push(
-          path.resolve(artifactDir, "../../lib/api-zod/src/index.ts"),
-          path.resolve(artifactDir, "../../lib/api-zod/index.ts")
-        );
+        targetPath = path.resolve(artifactDir, "../../lib/api-zod/src/index.ts");
+      } else if (subpath.startsWith("api-zod/")) {
+        targetPath = path.resolve(artifactDir, `../../lib/api-zod/src/${subpath.replace("api-zod/", "")}.ts`);
       } else {
-        possiblePaths.push(
-          path.resolve(artifactDir, `../../lib/${subpath}.ts`),
-          path.resolve(artifactDir, `../../lib/${subpath}/index.ts`),
-          path.resolve(artifactDir, `../../lib/${subpath}`)
-        );
+        targetPath = path.resolve(artifactDir, `../../lib/${subpath}/src/index.ts`);
       }
 
-      // العثور على أول مسار موجود فعلياً على النظام
-      for (const p of possiblePaths) {
-        if (fs.existsSync(p)) {
-          return { path: p };
-        }
+      // إذا لم يكن المسار ينتهي بـ .ts ووجدنا الملف، نقوم بإرجاعه مع جعله غير خارجي ليدمجه esbuild
+      if (fs.existsSync(targetPath)) {
+        return { path: targetPath, external: false };
       }
 
-      // إذا لم يتم العثور عليه، أرجاع المسار الافتراضي الأول لتظهر رسالة خطأ واضحة
-      return { path: possiblePaths[0] };
+      // محاولة بديلة بدون /src/
+      const altPath = path.resolve(artifactDir, `../../lib/${subpath}.ts`);
+      if (fs.existsSync(altPath)) {
+        return { path: altPath, external: false };
+      }
+
+      return { path: targetPath, external: false };
     });
   },
 };
