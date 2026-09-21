@@ -102,10 +102,11 @@ router.post("/auth/logout", requireAuth, (_req, res) => {
 
 // GET /api/auth/me
 router.get("/auth/me", requireAuth, async (req, res) => {
+  const userId = (req as any).user?.userId;
   const [user] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.id, req.user!.userId))
+    .where(eq(usersTable.id, userId))
     .limit(1);
   if (!user) {
     res.status(404).json({ error: "User not found" });
