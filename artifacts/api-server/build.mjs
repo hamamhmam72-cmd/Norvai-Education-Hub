@@ -9,6 +9,33 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
+// إضافة مخصصة لحل مسارات الـ workspace بكفاءة ودعم المسارات الفرعية
+const workspaceResolverPlugin = {
+  name: "workspace-resolver",
+  setup(build) {
+    build.onResolve({ filter: /^@workspace\// }, (args) => {
+      const subpath = args.path.replace(/^@workspace\//, "");
+      let targetPath;
+
+      if (subpath === "db") {
+        targetPath = path.resolve(artifactDir, "../../lib/db/src/index.ts");
+      } else if (subpath === "db/schema") {
+        targetPath = path.resolve(artifactDir, "../../lib/db/src/schema.ts");
+      } else if (subpath.startsWith("db/")) {
+        targetPath = path.resolve(artifactDir, `../../lib/db/src/${subpath.replace("db/", "")}.ts`);
+      } else if (subpath === "api-zod") {
+        targetPath = path.resolve(artifactDir, "../../lib/api-zod/src/index.ts");
+      } else if (subpath.startsWith("api-zod/")) {
+        targetPath = path.resolve(artifactDir, `../../lib/api-zod/src/${subpath.replace("api-zod/", "")}.ts`);
+      } else {
+        targetPath = path.resolve(artifactDir, `../../lib/${subpath}`);
+      }
+
+      return { path: targetPath };
+    });
+  },
+};
+
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
@@ -21,12 +48,10 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // توجيه كل مسار فرعي ورئيسي إلى ملفه الفعلي مباشرة لضمان نجاح المطابقة والبناء
-    alias: {
-      "@workspace/db/schema": path.resolve(artifactDir, "../../lib/db/src/schema.ts"),
-      "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/index.ts"),
-      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src/index.ts")
-    },
+    plugins: [
+      workspaceResolverPlugin,
+      esbuildPluginPino({ transports: ["pino-pretty"] })
+    ],
     external: [
       "*.node",
       "sharp",
@@ -101,9 +126,6 @@ async function buildAll() {
       "electron",
     ],
     sourcemap: "linked",
-    plugins: [
-      esbuildPluginPino({ transports: ["pino-pretty"] })
-    ],
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
