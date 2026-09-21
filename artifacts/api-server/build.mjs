@@ -5,6 +5,7 @@ import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
 
+// Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
@@ -21,11 +22,10 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // ربط الحزم المحلية مباشرة لمجلداتها الأصلية لضمان دمجها بالكامل داخل الملف المخرج
+    // ربط مسارات الـ workspace محلياً لضمان دمجها بالكامل أثناء البناء وتجنب خطأ الـ module مفقود
     alias: {
       "@workspace/db": path.resolve(artifactDir, "../../lib/db/src"),
-      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src"),
-      "@workspace/integrations-gemini-ai": path.resolve(artifactDir, "../../lib/integrations-gemini-ai/src")
+      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src")
     },
     external: [
       "*.node",
@@ -102,8 +102,10 @@ async function buildAll() {
     ],
     sourcemap: "linked",
     plugins: [
+      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
       esbuildPluginPino({ transports: ["pino-pretty"] })
     ],
+    // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
