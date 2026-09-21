@@ -8,7 +8,7 @@ const router: IRouter = Router();
 router.get("/healthz", (_req, res) => {
   const teamRealtime = getTeamRealtimeHealth();
   const data = HealthCheckResponse.parse({
-    status: teamRealtime.pubSubListener === "connected" ? "ok" : "degraded",
+   status: teamRealtime.pubSubListener === "connected" ? "ok" : "degraded",
     teamRealtime,
     teamMessageLimits: getTeamMessageLimitTelemetry(),
   });
