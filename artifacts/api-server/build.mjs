@@ -21,10 +21,11 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // التعديل هنا بالاشارة لمجلد الحزمة الرئيسي مباشرة
+    // توجيه كل مسار فرعي ورئيسي إلى ملفه الفعلي مباشرة لضمان نجاح المطابقة والبناء
     alias: {
-      "@workspace/db": path.resolve(artifactDir, "../../lib/db"),
-      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod")
+      "@workspace/db/schema": path.resolve(artifactDir, "../../lib/db/src/schema.ts"),
+      "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/index.ts"),
+      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src/index.ts")
     },
     external: [
       "*.node",
