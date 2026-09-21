@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { signToken } from "../lib/jwt.js";
-import { requireAuth } from "../middleware/auth.js";
+import { signToken } from "../lib/jwt";
+import { requireAuth } from "../middleware/auth";
 import {
   isStrongPassword,
   isValidFullName,
@@ -12,7 +12,7 @@ import {
   normalizeFullName,
   normalizeUsername,
   PASSWORD_REQUIREMENTS,
-} from "../lib/credentials.js";
+} from "../lib/credentials";
 
 const router = Router();
 
