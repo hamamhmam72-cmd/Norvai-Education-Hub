@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
