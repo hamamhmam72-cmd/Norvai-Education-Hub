@@ -21,8 +21,12 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // ضمان عدم اعتبار مسارات الـ workspace المحلية كحزم خارجية، لتتم دمجها بالكامل
-    packages: "bundle", 
+    // ربط الحزم المحلية مباشرة لمجلداتها الأصلية لضمان دمجها بالكامل داخل الملف المخرج
+    alias: {
+      "@workspace/db": path.resolve(artifactDir, "../../lib/db/src"),
+      "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src"),
+      "@workspace/integrations-gemini-ai": path.resolve(artifactDir, "../../lib/integrations-gemini-ai/src")
+    },
     external: [
       "*.node",
       "sharp",
