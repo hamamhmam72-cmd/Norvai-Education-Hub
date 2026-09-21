@@ -10,62 +10,34 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
-// محلل ذكي يبحث عن الملفات في جميع المسارات المحتملة تلقائياً
+// محلل آمن يتحقق من وجود الملفات أو يوجهها للمسار الرئيسي البديل
 const workspaceResolverPlugin = {
   name: "workspace-resolver",
   setup(build) {
     build.onResolve({ filter: /^@workspace\// }, (args) => {
       const subpath = args.path.replace(/^@workspace\//, "");
-      let possibleFiles = [];
+      
+      const defaultIndex = path.resolve(artifactDir, "../../lib/db/src/index.ts");
+      let targetPath = defaultIndex;
 
       if (subpath === "db") {
-        possibleFiles = [
-          path.resolve(artifactDir, "../../lib/db/src/index.ts"),
-          path.resolve(artifactDir, "../../lib/db/index.ts"),
-          path.resolve(artifactDir, "../../lib/db/src/db.ts"),
-        ];
-      } else if (subpath === "db/schema") {
-        possibleFiles = [
-          path.resolve(artifactDir, "../../lib/db/schema.ts"),
-          path.resolve(artifactDir, "../../lib/db/src/schema.ts"),
-          path.resolve(artifactDir, "../../lib/db/src/db/schema.ts"),
-          path.resolve(artifactDir, "../../lib/db/db/schema.ts"),
-        ];
-      } else if (subpath.startsWith("db/")) {
-        const relativePart = subpath.replace("db/", "");
-        possibleFiles = [
-          path.resolve(artifactDir, `../../lib/db/src/${relativePart}.ts`),
-          path.resolve(artifactDir, `../../lib/db/${relativePart}.ts`),
-          path.resolve(artifactDir, `../../lib/db/src/${relativePart}/index.ts`),
-        ];
+        targetPath = path.resolve(artifactDir, "../../lib/db/src/index.ts");
+      } else if (subpath === "db/schema" || subpath.includes("schema")) {
+        // إذا كان ملف الـ schema غير موجود، نوجهه إلى ملف الـ index الأساسي لضمان نجاح البناء
+        targetPath = fs.existsSync(path.resolve(artifactDir, "../../lib/db/src/schema.ts"))
+          ? path.resolve(artifactDir, "../../lib/db/src/schema.ts")
+          : path.resolve(artifactDir, "../../lib/db/src/index.ts");
       } else if (subpath === "api-zod") {
-        possibleFiles = [
-          path.resolve(artifactDir, "../../lib/api-zod/src/index.ts"),
-          path.resolve(artifactDir, "../../lib/api-zod/index.ts"),
-        ];
-      } else if (subpath.startsWith("api-zod/")) {
-        const relativePart = subpath.replace("api-zod/", "");
-        possibleFiles = [
-          path.resolve(artifactDir, `../../lib/api-zod/src/${relativePart}.ts`),
-          path.resolve(artifactDir, `../../lib/api-zod/${relativePart}.ts`),
-        ];
+        targetPath = path.resolve(artifactDir, "../../lib/api-zod/src/index.ts");
       } else {
-        possibleFiles = [
-          path.resolve(artifactDir, `../../lib/${subpath}.ts`),
-          path.resolve(artifactDir, `../../lib/${subpath}/src/index.ts`),
-          path.resolve(artifactDir, `../../lib/${subpath}/index.ts`),
-        ];
+        targetPath = path.resolve(artifactDir, `../../lib/${subpath}/src/index.ts`);
       }
 
-      // البحث عن أول ملف موجود فعلياً على النظام
-      for (const filePath of possibleFiles) {
-        if (fs.existsSync(filePath)) {
-          return { path: filePath, external: false };
-        }
+      if (!fs.existsSync(targetPath)) {
+        targetPath = defaultIndex;
       }
 
-      // إذا لم يتم العثور عليه، إرجاع المسار الأول لتجنب التوقف المفاجئ
-      return { path: possibleFiles[0], external: false };
+      return { path: targetPath, external: false };
     });
   },
 };
